@@ -6,6 +6,7 @@ import websockets
 import json
 import os
 from dotenv import load_dotenv
+import threading
 
 load_dotenv()
 
@@ -27,104 +28,126 @@ def incoming_call():
 @sock.route('/voice/stream')
 def handle_stream(ws):
     """Bridge Twilio audio to ChatGPT"""
+    print("WebSocket connected", flush=True)
     
-    async def bridge():
-        stream_sid = None
+    # Run async bridge in new event loop
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    try:
+        loop.run_until_complete(bridge_audio(ws))
+    except Exception as e:
+        print(f"Handler error: {e}", flush=True)
+    finally:
+        loop.close()
+
+async def bridge_audio(ws):
+    """Async bridge function"""
+    stream_sid = None
+    openai_ws = None
+    
+    try:
+        # Connect to ChatGPT
+        print("Connecting to OpenAI...", flush=True)
+        openai_ws = await websockets.connect(
+            "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
+            additional_headers={
+                "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+                "OpenAI-Beta": "realtime=v1"
+            }
+        )
         
-        try:
-            # Connect to ChatGPT
-            print("Attempting OpenAI connection...", flush=True)
-            openai_ws = await websockets.connect(
-                "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01",
-                additional_headers={
-                    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-                    "OpenAI-Beta": "realtime=v1"
-                }
-            )
+        print("Connected to OpenAI!", flush=True)
+        
+        # Configure session
+        await openai_ws.send(json.dumps({
+            "type": "session.update",
+            "session": {
+                "modalities": ["audio", "text"],
+                "input_audio_format": "g711_ulaw",
+                "output_audio_format": "g711_ulaw"
+            }
+        }))
+        
+        print("Session configured", flush=True)
+        
+        # Handle messages
+        twilio_task = asyncio.create_task(handle_twilio_messages(ws, openai_ws))
+        openai_task = asyncio.create_task(handle_openai_messages(openai_ws, ws))
+        
+        # Wait for both tasks
+        await asyncio.gather(twilio_task, openai_task, return_exceptions=True)
+        
+    except Exception as e:
+        print(f"Bridge error: {e}", flush=True)
+    finally:
+        if openai_ws:
+            await openai_ws.close()
+        print("Bridge closed", flush=True)
+
+async def handle_twilio_messages(ws, openai_ws):
+    """Handle messages from Twilio"""
+    try:
+        print("Listening for Twilio messages...", flush=True)
+        while True:
+            msg = ws.receive()
+            if not msg:
+                break
+                
+            data = json.loads(msg)
             
-            print("ChatGPT connected!", flush=True)
-            
-            # Configure session for Twilio's audio format
-            await openai_ws.send(json.dumps({
-                "type": "session.update",
-                "session": {
-                    "modalities": ["audio", "text"],
-                    "input_audio_format": "g711_ulaw",
-                    "output_audio_format": "g711_ulaw",
-                    "turn_detection": {
-                        "type": "server_vad"
-                    }
-                }
-            }))
-            print("Session configured for Twilio audio", flush=True)
-            
-            # Your voice → ChatGPT
-            async def twilio_to_chatgpt():
-                nonlocal stream_sid
-                try:
-                    print("Starting Twilio→ChatGPT stream...", flush=True)
-                    while True:
-                        msg = ws.receive()
-                        if not msg:
-                            print("Twilio connection closed", flush=True)
-                            break
-                        
-                        data = json.loads(msg)
-                        
-                        if data['event'] == 'start':
-                            stream_sid = data['start']['streamSid']
-                            print(f"Twilio stream started, SID: {stream_sid}", flush=True)
-                            
-                        elif data['event'] == 'media':
-                            await openai_ws.send(json.dumps({
-                                "type": "input_audio_buffer.append",
-                                "audio": data['media']['payload']
-                            }))
-                            
-                        elif data['event'] == 'stop':
-                            print("Twilio stream stopped", flush=True)
-                            break
-                            
-                except Exception as e:
-                    print(f"Twilio→ChatGPT error: {e}", flush=True)
-                finally:
-                    await openai_ws.close()
-            
-            # ChatGPT → Your phone
-            async def chatgpt_to_twilio():
-                try:
-                    print("Starting ChatGPT→Twilio stream...", flush=True)
-                    
-                    async for msg in openai_ws:
-                        event = json.loads(msg)
-                        event_type = event.get('type', '')
-                        
-                        if event_type == 'response.audio.delta':
-                            if stream_sid:
-                                ws.send(json.dumps({
-                                    'event': 'media',
-                                    'streamSid': stream_sid,
-                                    'media': {'payload': event['delta']}
-                                }))
-                                
-                        elif event_type == 'conversation.item.input_audio_transcription.completed':
-                            print(f"\nYou said: {event.get('transcript', 'N/A')}", flush=True)
-                            
-                        elif event_type == 'response.done':
-                            print("\nChatGPT finished responding", flush=True)
-                            
-                        elif event_type == 'error':
-                            print(f"\nOpenAI error: {event}", flush=True)
-                            
-                except Exception as e:
-                    print(f"ChatGPT→Twilio error: {e}", flush=True)
-            
-            await asyncio.gather(twilio_to_chatgpt(), chatgpt_to_twilio())
-            
-        except Exception as e:
-            print(f"Bridge error: {e}", flush=True)
+            if data['event'] == 'start':
+                print(f"Stream started: {data['start']['streamSid']}", flush=True)
+                
+            elif data['event'] == 'media':
+                # Forward audio to OpenAI
+                await openai_ws.send(json.dumps({
+                    "type": "input_audio_buffer.append",
+                    "audio": data['media']['payload']
+                }))
+                
+            elif data['event'] == 'stop':
+                print("Stream stopped", flush=True)
+                break
+                
+    except Exception as e:
+        print(f"Twilio handler error: {e}", flush=True)
+
+async def handle_openai_messages(openai_ws, ws):
+    """Handle messages from OpenAI"""
+    stream_sid = None
     
-    asyncio.run(bridge())
+    try:
+        print("Listening for OpenAI messages...", flush=True)
+        
+        # Get stream SID from first Twilio message
+        first_msg = ws.receive()
+        if first_msg:
+            data = json.loads(first_msg)
+            if data['event'] == 'start':
+                stream_sid = data['start']['streamSid']
+                print(f"Got stream SID: {stream_sid}", flush=True)
+        
+        async for msg in openai_ws:
+            event = json.loads(msg)
+            event_type = event.get('type', '')
+            
+            if event_type == 'response.audio.delta' and stream_sid:
+                # Forward audio to Twilio
+                ws.send(json.dumps({
+                    'event': 'media',
+                    'streamSid': stream_sid,
+                    'media': {'payload': event['delta']}
+                }))
+                
+            elif event_type == 'conversation.item.input_audio_transcription.completed':
+                print(f"You: {event.get('transcript', '')}", flush=True)
+                
+            elif event_type == 'error':
+                print(f"OpenAI error: {event}", flush=True)
+                
+    except Exception as e:
+        print(f"OpenAI handler error: {e}", flush=True)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
