@@ -3,3 +3,4 @@ openai
 requests
 websockets
 python-dotenv
+twilio
