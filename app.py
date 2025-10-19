@@ -92,13 +92,17 @@ def alert_twiml():
 def alert_response():
     """Handle user's response to alert"""
     digit = request.form.get('Digits', '')
+    print(f"User pressed: {digit}", flush=True)
     
     response = VoiceResponse()
     
     if digit == '1':
+        project_id = os.getenv('OPENAI_PROJECT_ID')
+        print(f"Dialing SIP: {project_id}@sip.api.openai.com", flush=True)
+        
         response.say("Connecting you to the AI assistant.")
         dial = Dial()
-        dial.sip(f"sip:{os.getenv('OPENAI_PROJECT_ID')}@sip.api.openai.com;transport=tls")
+        dial.sip(f"sip:{project_id}@sip.api.openai.com;transport=tls")
         response.append(dial)
     else:
         response.say("Goodbye.")
