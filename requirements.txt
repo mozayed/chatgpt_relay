@@ -1,7 +1,5 @@
 flask
-flask-sock
-twilio
-websockets
-python-dotenv
 openai
 requests
+websockets
+python-dotenv
