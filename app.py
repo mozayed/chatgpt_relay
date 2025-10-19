@@ -54,10 +54,14 @@ def trigger_alert():
     print(f"Triggering alert call to {your_phone}: {alert_message}", flush=True)
     
     try:
+        # URL encode the message properly
+        from urllib.parse import quote
+        encoded_message = quote(alert_message)
+        
         call = twilio_client.calls.create(
             to=your_phone,
             from_=os.getenv("TWILIO_PHONE_NUMBER"),
-            url=f"https://{request.host}/alert_twiml?message={alert_message}"
+            url=f"https://{request.host}/alert_twiml?message={encoded_message}"
         )
         print(f"Alert call initiated: {call.sid}", flush=True)
         return jsonify({"status": "success", "call_sid": call.sid})
