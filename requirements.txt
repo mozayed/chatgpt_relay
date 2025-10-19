@@ -3,3 +3,5 @@ flask-sock
 twilio
 websockets
 python-dotenv
+openai
+requests
