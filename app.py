@@ -42,6 +42,20 @@ def handle_stream(ws):
             
             print("ChatGPT connected!", flush=True)
             
+            # Configure session for Twilio's audio format
+            await openai_ws.send(json.dumps({
+                "type": "session.update",
+                "session": {
+                    "modalities": ["audio", "text"],
+                    "input_audio_format": "g711_ulaw",
+                    "output_audio_format": "g711_ulaw",
+                    "input_audio_transcription": {
+                        "model": "whisper-1"
+                    }
+                }
+            }))
+            print("Session configured for Twilio audio", flush=True)
+            
             # Your voice → ChatGPT
             async def twilio_to_chatgpt():
                 try:
@@ -60,6 +74,10 @@ def handle_stream(ws):
                                 "type": "input_audio_buffer.append",
                                 "audio": data['media']['payload']
                             }))
+                        elif data['event'] == 'stop':
+                            print("Twilio stream stopped", flush=True)
+                            break
+                            
                 except Exception as e:
                     print(f"Twilio→ChatGPT error: {e}", flush=True)
             
@@ -67,18 +85,32 @@ def handle_stream(ws):
             async def chatgpt_to_twilio():
                 try:
                     print("Starting ChatGPT→Twilio stream...", flush=True)
+                    stream_sid = None
+                    
                     async for msg in openai_ws:
                         event = json.loads(msg)
                         
                         if event['type'] == 'response.audio.delta':
-                            ws.send(json.dumps({
-                                'event': 'media',
-                                'media': {'payload': event['delta']}
-                            }))
+                            if stream_sid:
+                                ws.send(json.dumps({
+                                    'event': 'media',
+                                    'streamSid': stream_sid,
+                                    'media': {'payload': event['delta']}
+                                }))
                         elif event['type'] == 'conversation.item.input_audio_transcription.completed':
                             print(f"You said: {event.get('transcript', 'N/A')}", flush=True)
+                        elif event['type'] == 'response.text.delta':
+                            print(f"ChatGPT: {event.get('delta', '')}", end='', flush=True)
                         elif event['type'] == 'error':
                             print(f"OpenAI error: {event}", flush=True)
+                            
+                    # Get stream SID from first Twilio message
+                    first_msg = ws.receive()
+                    if first_msg:
+                        first_data = json.loads(first_msg)
+                        if first_data['event'] == 'start':
+                            stream_sid = first_data['start']['streamSid']
+                            print(f"Got stream SID: {stream_sid}", flush=True)
                             
                 except Exception as e:
                     print(f"ChatGPT→Twilio error: {e}", flush=True)
