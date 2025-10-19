@@ -5,7 +5,6 @@ import requests
 
 app = Flask(__name__)
 
-# Initialize OpenAI client with webhook secret
 client = OpenAI(
     webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET")
 )
@@ -14,7 +13,6 @@ client = OpenAI(
 def webhook():
     """Receive incoming call webhook from OpenAI"""
     
-    # Verify webhook is from OpenAI
     try:
         event = client.webhooks.unwrap(request.data, request.headers)
     except Exception as e:
@@ -26,18 +24,22 @@ def webhook():
         print(f"Incoming call: {call_id}", flush=True)
         
         # Accept the call
-        requests.post(
-            f"https://api.openai.com/v1/realtime/calls/{call_id}/accept",
-            headers={
-                "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "type": "realtime",
-                "model": "gpt-4o-realtime-preview-2024-10-01",
-                "instructions": "You are a helpful assistant."
-            }
-        )
+        try:
+            response = requests.post(
+                f"https://api.openai.com/v1/realtime/calls/{call_id}/accept",
+                headers={
+                    "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "type": "realtime",
+                    "model": "gpt-4o-realtime-preview-2024-10-01",
+                    "instructions": "You are a helpful assistant."
+                }
+            )
+            print(f"Accept response: {response.status_code} - {response.text}", flush=True)
+        except Exception as e:
+            print(f"Accept call failed: {e}", flush=True)
         
         return Response(status=200)
     
