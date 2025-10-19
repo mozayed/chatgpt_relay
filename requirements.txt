@@ -1,0 +1,5 @@
+flask
+flask-sock
+twilio
+websockets
+python-dotenv
