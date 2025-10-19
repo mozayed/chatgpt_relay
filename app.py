@@ -8,6 +8,8 @@ import websockets
 import json
 import uuid
 from datetime import datetime
+from twilio.rest import Client
+from twilio.twiml.voice_response import VoiceResponse, Dial
 
 app = Flask(__name__)
 
@@ -15,7 +17,13 @@ client = OpenAI(
     webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET")
 )
 
-# Queue system (same as before)
+# Twilio credentials
+twilio_client = Client(
+    os.getenv("TWILIO_ACCOUNT_SID"),
+    os.getenv("TWILIO_AUTH_TOKEN")
+)
+
+# Queue system
 pending_requests = []
 responses = {}
 
@@ -35,6 +43,64 @@ def submit_response():
     print(f"*** STORED RESPONSE for {req_id}", flush=True)
     return jsonify({"status": "received"})
 
+# NEW: Alert endpoints
+@app.route("/trigger_alert", methods=['POST'])
+def trigger_alert():
+    """Receive alert from Grafana and trigger phone call"""
+    data = request.json
+    alert_message = data.get('message', 'Critical network alert')
+    your_phone = data.get('phone', os.getenv("YOUR_PHONE_NUMBER"))
+    
+    print(f"Triggering alert call to {your_phone}: {alert_message}", flush=True)
+    
+    try:
+        call = twilio_client.calls.create(
+            to=your_phone,
+            from_=os.getenv("TWILIO_PHONE_NUMBER"),
+            url=f"https://{request.host}/alert_twiml?message={alert_message}"
+        )
+        print(f"Alert call initiated: {call.sid}", flush=True)
+        return jsonify({"status": "success", "call_sid": call.sid})
+    except Exception as e:
+        print(f"Failed to trigger alert: {e}", flush=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/alert_twiml", methods=['POST'])
+def alert_twiml():
+    """Generate TwiML for alert call"""
+    alert_message = request.args.get('message', 'Network alert')
+    
+    response = VoiceResponse()
+    response.say(f"Alert: {alert_message}")
+    response.pause(length=1)
+    
+    gather = response.gather(
+        num_digits=1,
+        action='/alert_response',
+        timeout=10
+    )
+    gather.say("Press 1 to talk to the AI assistant for investigation, or hang up.")
+    
+    response.say("No input received. Goodbye.")
+    return str(response)
+
+@app.route("/alert_response", methods=['POST'])
+def alert_response():
+    """Handle user's response to alert"""
+    digit = request.form.get('Digits', '')
+    
+    response = VoiceResponse()
+    
+    if digit == '1':
+        response.say("Connecting you to the AI assistant.")
+        dial = Dial()
+        dial.sip(f"sip:{os.getenv('OPENAI_PROJECT_ID')}@sip.api.openai.com;transport=tls")
+        response.append(dial)
+    else:
+        response.say("Goodbye.")
+    
+    return str(response)
+
 async def monitor_call(call_id):
     """Monitor call and handle function calls"""
     try:
@@ -51,7 +117,6 @@ async def monitor_call(call_id):
                 event_type = event.get('type', '')
                 
                 if event_type == 'response.function_call_arguments.done':
-                    # ChatGPT wants to call a function
                     call_data = event
                     function_name = call_data.get('name', '')
                     arguments = json.loads(call_data.get('arguments', '{}'))
@@ -161,4 +226,4 @@ def webhook():
     return Response(status=200)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000, debug=True)
