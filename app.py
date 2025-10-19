@@ -23,7 +23,7 @@ def webhook():
         call_id = event.data.call_id
         print(f"Incoming call: {call_id}", flush=True)
         
-        # Accept the call
+        # Accept the call with tools
         try:
             response = requests.post(
                 f"https://api.openai.com/v1/realtime/calls/{call_id}/accept",
@@ -34,7 +34,24 @@ def webhook():
                 json={
                     "type": "realtime",
                     "model": "gpt-4o-realtime-preview-2024-10-01",
-                    "instructions": "You are a helpful assistant."
+                    "instructions": "You are an AI network agent. You can check device VLANs.",
+                    "tools": [
+                        {
+                            "type": "function",
+                            "name": "get_device_vlans",
+                            "description": "Gets VLAN data for a network device",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "device_name": {
+                                        "type": "string",
+                                        "description": "Name of the device like 'ground floor switch'"
+                                    }
+                                },
+                                "required": ["device_name"]
+                            }
+                        }
+                    ]
                 }
             )
             print(f"Accept response: {response.status_code} - {response.text}", flush=True)
