@@ -57,7 +57,7 @@ class NetworkAgent:
                 {
                     "incident_id": sys_id,
                     "state": "2",
-                    "assigned_to": os.getenv("SERVICENOW_USERNAME", "ai_agent"),
+                    "assigned_to": os.getenv("SERVICENOW_USERNAME", "ai_user"),
                     "work_notes": work_notes
                 }
             )
