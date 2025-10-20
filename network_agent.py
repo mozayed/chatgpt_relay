@@ -102,7 +102,12 @@ Assigned to: ai_agent"""
         
         server_params = StdioServerParameters(
             command="python",
-            args=["-m", "servicenow_mcp.cli"]
+            args=["-m", "servicenow_mcp.cli"],
+            env={  # ADD THIS
+                "SERVICENOW_INSTANCE_URL": os.getenv("SERVICENOW_INSTANCE"),
+                "SERVICENOW_USERNAME": os.getenv("SERVICENOW_USERNAME"),
+                "SERVICENOW_PASSWORD": os.getenv("SERVICENOW_PASSWORD"),
+    }
         )
         
         async with stdio_client(server_params) as (read, write):
