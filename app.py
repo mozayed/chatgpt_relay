@@ -83,7 +83,7 @@ def alert_twiml():
         action='/alert_response',
         timeout=10
     )
-    gather.say("Press 1 to talk to the AI assistant for investigation, or hang up.")
+    gather.say("Press 1 to talk to your AI agent for investigation, or hang up.")
     
     response.say("No input received. Goodbye.")
     return str(response)
@@ -100,7 +100,7 @@ def alert_response():
         project_id = os.getenv('OPENAI_PROJECT_ID')
         print(f"Dialing SIP: {project_id}@sip.api.openai.com", flush=True)
         
-        response.say("Connecting you to the AI assistant.")
+        response.say("Connecting you to the AI agent.")
         dial = Dial()
         dial.sip(f"sip:{project_id}@sip.api.openai.com;transport=tls")
         response.append(dial)
