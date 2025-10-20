@@ -149,8 +149,8 @@ Assigned to: ai_agent"""
                     
                     await asyncio.sleep(60)  # Check every 60 seconds
     
-    async def query_ticket(self, ticket_number):
-        """Query a specific ticket - for on-demand voice queries"""
+    async def query_ticket_by_number(self, ticket_number):
+        """Query a specific ticket by number - for voice queries"""
         print(f"Querying ticket: {ticket_number}", flush=True)
         
         server_params = StdioServerParameters(
@@ -170,8 +170,67 @@ Assigned to: ai_agent"""
                     
                     if result and result.content:
                         data = json.loads(result.content[0].text)
-                        return data
+                        
+                        if data.get('success'):
+                            ticket = data.get('incident', {})
+                            return {
+                                "success": True,
+                                "ticket": ticket
+                            }
+                        else:
+                            return {
+                                "success": False,
+                                "message": data.get('message', 'Ticket not found')
+                            }
                     
                 except Exception as e:
                     print(f"Error querying ticket: {e}", flush=True)
                     return {"success": False, "message": str(e)}
+        
+        return {"success": False, "message": "No response"}
+    
+    async def ask_claude_with_context(self, question):
+        """Ask Claude a question with ServiceNow context"""
+        print(f"Claude query: {question}", flush=True)
+        
+        # Extract ticket number if mentioned
+        import re
+        ticket_match = re.search(r'INC\d+', question, re.IGNORECASE)
+        
+        context = ""
+        if ticket_match:
+            ticket_number = ticket_match.group(0).upper()
+            ticket_data = await self.query_ticket_by_number(ticket_number)
+            
+            if ticket_data.get('success'):
+                ticket = ticket_data.get('ticket', {})
+                context = f"""
+Ticket Information:
+- Number: {ticket.get('number')}
+- Short Description: {ticket.get('short_description')}
+- Description: {ticket.get('description')}
+- State: {ticket.get('state')}
+- Priority: {ticket.get('priority')}
+- Assigned To: {ticket.get('assigned_to')}
+- Created: {ticket.get('created_on')}
+- Updated: {ticket.get('updated_on')}
+"""
+        
+        try:
+            message = self.claude.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": f"""{context}
+
+User Question: {question}
+
+Provide a concise, helpful answer based on the ticket information above."""
+                }]
+            )
+            
+            return message.content[0].text
+        except Exception as e:
+            print(f"Error asking Claude: {e}", flush=True)
+            return f"Sorry, I encountered an error: {str(e)}"
