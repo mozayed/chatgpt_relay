@@ -4,3 +4,6 @@ requests
 websockets
 python-dotenv
 twilio
+mcp
+pydantic
+anthropic
