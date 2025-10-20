@@ -102,7 +102,8 @@ Assigned to: ai_agent"""
         
         server_params = StdioServerParameters(
             command="python",
-            args=["-m", "servicenow_mcp.cli"]
+            args=["-m", "servicenow_mcp.cli"],
+            env=dict(os.environ)
         )
         
         async with stdio_client(server_params) as (read, write):
@@ -155,7 +156,8 @@ Assigned to: ai_agent"""
         
         server_params = StdioServerParameters(
             command="python",
-            args=["-m", "servicenow_mcp.cli"]
+            args=["-m", "servicenow_mcp.cli"],
+            env=dict(os.environ)
         )
         
         async with stdio_client(server_params) as (read, write):
