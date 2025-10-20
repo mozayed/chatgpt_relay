@@ -7,4 +7,4 @@ twilio
 mcp
 pydantic
 anthropic
-servicenow-mcp
+-e ./servicenow-mcp
