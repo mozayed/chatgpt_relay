@@ -139,6 +139,7 @@ async def monitor_call(call_id):
                     
                     print(f"Function call: {function_name} with {arguments}", flush=True)
                     
+                    # Handle get_device_vlans
                     if function_name == 'get_device_vlans':
                         device_name = arguments.get('device_name', '')
                         
@@ -177,9 +178,32 @@ async def monitor_call(call_id):
                                 "output": result_text
                             }
                         }))
+                    
+                    # Handle ask_claude
+                    elif function_name == 'ask_claude':
+                        question = arguments.get('question', '')
+                        
+                        print(f"Asking Claude: {question}", flush=True)
+                        
+                        # Call network agent's Claude integration
+                        answer = await network_agent.ask_claude_with_context(question)
+                        
+                        print(f"Claude answered: {answer[:100]}...", flush=True)
+                        
+                        # Send result back to ChatGPT
+                        await ws.send(json.dumps({
+                            "type": "conversation.item.create",
+                            "item": {
+                                "type": "function_call_output",
+                                "call_id": call_data.get('call_id'),
+                                "output": answer
+                            }
+                        }))
                         
     except Exception as e:
         print(f"Monitor error: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
 @app.route("/webhook", methods=['POST'])
 def webhook():
@@ -206,7 +230,7 @@ def webhook():
                 json={
                     "type": "realtime",
                     "model": "gpt-4o-realtime-preview-2024-10-01",
-                    "instructions": "You are a network assistant. You can check device VLANs for network devices.",
+                    "instructions": "You are a network assistant. You can check device VLANs and answer questions about ServiceNow tickets. When the user asks about tickets or complex questions, use the ask_claude function.",
                     "tools": [
                         {
                             "type": "function",
@@ -221,6 +245,21 @@ def webhook():
                                     }
                                 },
                                 "required": ["device_name"]
+                            }
+                        },
+                        {
+                            "type": "function",
+                            "name": "ask_claude",
+                            "description": "Ask Claude (the AI brain) about ServiceNow tickets, complex network issues, or any questions requiring deep analysis. Use this for ticket queries like 'What is the status of ticket INC001?'",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "question": {
+                                        "type": "string",
+                                        "description": "The question to ask Claude, including ticket numbers if mentioned"
+                                    }
+                                },
+                                "required": ["question"]
                             }
                         }
                     ]
