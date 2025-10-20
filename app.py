@@ -1,6 +1,7 @@
 from flask import Flask, request, Response, jsonify
 from openai import OpenAI
 import os
+from dotenv import load_dotenv
 import requests
 import threading
 import asyncio
@@ -10,22 +11,31 @@ import uuid
 from datetime import datetime
 from twilio.rest import Client
 from twilio.twiml.voice_response import VoiceResponse, Dial
+from network_agent import NetworkAgent
+
+load_dotenv()
 
 app = Flask(__name__)
 
-client = OpenAI(
+# OpenAI client
+openai_client = OpenAI(
     webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET")
 )
 
-# Twilio credentials
+# Twilio client
 twilio_client = Client(
     os.getenv("TWILIO_ACCOUNT_SID"),
     os.getenv("TWILIO_AUTH_TOKEN")
 )
 
-# Queue system
+# Initialize Network Agent
+network_agent = NetworkAgent()
+
+# Queue system for Flask API
 pending_requests = []
 responses = {}
+
+# ==================== FLASK API QUEUE ENDPOINTS ====================
 
 @app.route("/poll", methods=['GET'])
 def poll():
@@ -43,7 +53,8 @@ def submit_response():
     print(f"*** STORED RESPONSE for {req_id}", flush=True)
     return jsonify({"status": "received"})
 
-# NEW: Alert endpoints
+# ==================== ALERT ENDPOINTS ====================
+
 @app.route("/trigger_alert", methods=['POST'])
 def trigger_alert():
     """Receive alert from Grafana and trigger phone call"""
@@ -54,7 +65,6 @@ def trigger_alert():
     print(f"Triggering alert call to {your_phone}: {alert_message}", flush=True)
     
     try:
-        # URL encode the message properly
         from urllib.parse import quote
         encoded_message = quote(alert_message)
         
@@ -83,7 +93,7 @@ def alert_twiml():
         action='/alert_response',
         timeout=10
     )
-    gather.say("Press 1 to talk to your AI agent for investigation, or hang up.")
+    gather.say("Press 1 to talk to the AI assistant for investigation, or hang up.")
     
     response.say("No input received. Goodbye.")
     return str(response)
@@ -92,22 +102,20 @@ def alert_twiml():
 def alert_response():
     """Handle user's response to alert"""
     digit = request.form.get('Digits', '')
-    print(f"User pressed: {digit}", flush=True)
     
     response = VoiceResponse()
     
     if digit == '1':
-        project_id = os.getenv('OPENAI_PROJECT_ID')
-        print(f"Dialing SIP: {project_id}@sip.api.openai.com", flush=True)
-        
-        response.say("Connecting you to the AI agent.")
+        response.say("Connecting you to the AI assistant.")
         dial = Dial()
-        dial.sip(f"sip:{project_id}@sip.api.openai.com;transport=tls")
+        dial.sip(f"sip:{os.getenv('OPENAI_PROJECT_ID')}@sip.api.openai.com;transport=tls")
         response.append(dial)
     else:
         response.say("Goodbye.")
     
     return str(response)
+
+# ==================== VOICE CALL MONITORING ====================
 
 async def monitor_call(call_id):
     """Monitor call and handle function calls"""
@@ -178,7 +186,7 @@ def webhook():
     """Receive incoming call webhook from OpenAI"""
     
     try:
-        event = client.webhooks.unwrap(request.data, request.headers)
+        event = openai_client.webhooks.unwrap(request.data, request.headers)
     except Exception as e:
         print(f"Invalid webhook: {e}", flush=True)
         return Response("Invalid signature", status=400)
@@ -232,6 +240,21 @@ def webhook():
         return Response(status=200)
     
     return Response(status=200)
+
+# ==================== START AUTONOMOUS AGENT ====================
+
+def start_autonomous_agent():
+    """Start the autonomous agent in a background thread"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(network_agent.autonomous_loop())
+
+# Start autonomous agent in background thread
+agent_thread = threading.Thread(target=start_autonomous_agent, daemon=True)
+agent_thread.start()
+print("Autonomous agent started in background", flush=True)
+
+# ==================== MAIN ====================
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
