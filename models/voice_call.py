@@ -3,6 +3,7 @@ from datetime import datetime
 from models.tools import Tools
 from models.jobs import Jobs
 from models.servicenow import ServiceNow
+from models.agent import NetworkAgent
 
 class VoiceCall:
     def __init__(self, call_id):
@@ -78,7 +79,7 @@ class VoiceCall:
                             print(f"Asking Claude: {question}", flush=True)
                             
                             # Call network agent's Claude integration
-                            servicenow_instance = ServiceNow()
+                            servicenow_instance = ServiceNow(agent_instance=NetworkAgent())
                             answer = await servicenow_instance.ask_claude_with_context(question)
                             
                             print(f"Claude answered: {answer[:100]}...", flush=True)
