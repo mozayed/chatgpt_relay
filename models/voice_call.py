@@ -1,6 +1,8 @@
-import websockets, json, os, uuid
+import websockets, json, os, uuid, asyncio
 from datetime import datetime
 from models.tools import Tools
+from models.jobs import Jobs
+from models.agent import NetworkAgent
 
 class VoiceCall:
     def __init__(self, call_id):
@@ -40,20 +42,21 @@ class VoiceCall:
                                 "params": {"device_name": device_name},
                                 "timestamp": datetime.now().isoformat()
                             }
-                            pending_requests.append(req_data)
+                            jobs = Jobs()
+                            jobs.pending_requests.append(req_data)
                             print(f"Queued request {req_id}", flush=True)
                             
                             # Wait for response from on-prem
                             import time
                             timeout = 10
                             start = time.time()
-                            while req_id not in responses:
+                            while req_id not in jobs.responses:
                                 if time.time() - start > timeout:
                                     result_text = "Sorry, request timed out"
                                     break
                                 await asyncio.sleep(0.5)
                             else:
-                                result = responses.pop(req_id)
+                                result = jobs.responses.pop(req_id)
                                 result_text = f"VLANs: {json.dumps(result)}"
                             
                             print(f"Got result: {result_text}", flush=True)
@@ -75,6 +78,7 @@ class VoiceCall:
                             print(f"Asking Claude: {question}", flush=True)
                             
                             # Call network agent's Claude integration
+                            network_agent = NetworkAgent()
                             answer = await network_agent.ask_claude_with_context(question)
                             
                             print(f"Claude answered: {answer[:100]}...", flush=True)
