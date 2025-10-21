@@ -2,7 +2,7 @@ import websockets, json, os, uuid, asyncio
 from datetime import datetime
 from models.tools import Tools
 from models.jobs import Jobs
-from models.agent import NetworkAgent
+from models.servicenow import ServiceNow
 
 class VoiceCall:
     def __init__(self, call_id):
@@ -78,8 +78,8 @@ class VoiceCall:
                             print(f"Asking Claude: {question}", flush=True)
                             
                             # Call network agent's Claude integration
-                            network_agent = NetworkAgent()
-                            answer = await network_agent.ask_claude_with_context(question)
+                            servicenow_instance = ServiceNow()
+                            answer = await servicenow_instance.ask_claude_with_context(question)
                             
                             print(f"Claude answered: {answer[:100]}...", flush=True)
                             
