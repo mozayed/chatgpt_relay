@@ -216,6 +216,8 @@ Ticket Information:
 - Assigned To: {ticket.get('assigned_to')}
 - Created: {ticket.get('created_on')}
 - Updated: {ticket.get('updated_on')}
+- Work Notes: {ticket.get('work_notes', 'No work notes')}
+- Comments: {ticket.get('comments', 'No comments')}
 """
         
         try:
