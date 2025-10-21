@@ -32,7 +32,7 @@ def webhook():
                     "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
                     "Content-Type": "application/json"
                 },
-                json={json.dumps(tools.get_tools())}
+                json= json.dumps(tools.get_tools())
                     
             )
             print(f"Accept response: {response.status_code}", flush=True)
