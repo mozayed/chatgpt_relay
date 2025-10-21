@@ -1,5 +1,4 @@
 import os, json, re, asyncio
-from models.agent import NetworkAgent
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -7,8 +6,9 @@ class ServiceNow:
 
     processed_tickets = {}
 
-    def __init__(self):
+    def __init__(self, agent_instance):
         self.aassignment_group = os.getenv("SERVICENOW_ASSIGNMENT_GROUP_ID", "16eb774083b836101bf4ffd6feaad360")
+        self.agent_instance = agent_instance
 
     async def check_new_tickets(self, session):
         """Poll ServiceNow for new tickets assigned to Network_Agents group"""
@@ -28,9 +28,8 @@ class ServiceNow:
     
     async def analyze_ticket_with_claude(self, ticket):
         """Use Claude to analyze the ticket"""
-        network_agent = NetworkAgent()
         try:
-            message = network_agent.claude.messages.create(
+            message = self.agent_instance.claude.messages.create(
                 model="claude-sonnet-4-5-20250929",
                 max_tokens=2048,
                 messages=[{

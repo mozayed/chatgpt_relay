@@ -1,9 +1,8 @@
 import os
-from agent import NetworkAgent
 from openai import OpenAI
 from twilio.rest import Client
 
-class VoiceAgent(NetworkAgent):
+class VoiceAgent():
     def __init__(self):
         self.openai_client = OpenAI(webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET"))
         self.twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
