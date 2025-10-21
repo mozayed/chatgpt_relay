@@ -1,4 +1,4 @@
-import asyncio, threading, requests, os
+import asyncio, threading, requests, os, json
 from flask import Blueprint, Response, request
 from models.voice_call import VoiceCall
 from models.voice_agent import VoiceAgent
@@ -32,7 +32,7 @@ def webhook():
                     "Authorization": f"Bearer {os.getenv('OPENAI_API_KEY')}",
                     "Content-Type": "application/json"
                 },
-                json={tools.get_tools()}
+                json={json.dumps(tools.get_tools())}
                     
             )
             print(f"Accept response: {response.status_code}", flush=True)
