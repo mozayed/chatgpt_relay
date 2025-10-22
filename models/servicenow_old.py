@@ -34,8 +34,22 @@ class ServiceNow:
             llm_type = llm if llm is not None else self.default_llm
             llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
 
-            result = await llm_service.analyze(f'Analyze: {ticket}')
-            return result
+            message = self.agent_instance.claude.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=2048,
+                messages=[{
+                    "role": "user",
+                    "content": f"""Analyze this ServiceNow ticket:
+                    
+                    Number: {ticket.get('number', 'N/A')}
+                    Short Description: {ticket.get('short_description', 'N/A')}
+                    Description: {ticket.get('description', 'N/A')}
+                    
+                    What type of issue is this? Can it be automated? Provide a brief analysis."""
+                }]
+            )
+            
+            return message.content[0].text
         except Exception as e:
             print(f"Error analyzing ticket: {e}", flush=True)
             return None
@@ -61,8 +75,8 @@ class ServiceNow:
         """Process a single ticket - analyze and take ownership"""
         print(f"Processing: {ticket.get('number')} - {ticket.get('short_description')}", flush=True)
         
-        # Analyze the ticket
-        analysis = await self.analyze_ticket(ticket)
+        # Analyze with Claude
+        analysis = await self.analyze_ticket_with_claude(ticket)
         
         if analysis:
             sys_id = ticket.get('sys_id')
@@ -126,18 +140,14 @@ class ServiceNow:
         
         return {"success": False, "message": "No response"}
     
-    async def ask_llm_with_context(self, question, llm = None):
-
-        llm_type = llm if llm is not None else self.default_llm
-
-        """Ask LLM a question with ServiceNow context"""
-        print(f"LLM query: {question}", flush=True)
+    async def ask_claude_with_context(self, question):
+        """Ask Claude a question with ServiceNow context"""
+        print(f"Claude query: {question}", flush=True)
         
         # Extract ticket number if mentioned
         ticket_match = re.search(r'INC\d+', question, re.IGNORECASE)
         
-        context = question
-
+        context = ""
         if ticket_match:
             ticket_number = ticket_match.group(0).upper()
             ticket_data = await self.query_ticket_by_number(ticket_number)
@@ -156,18 +166,23 @@ class ServiceNow:
                     - Updated: {ticket.get('updated_on')}
                     - Work Notes: {ticket.get('work_notes', 'No work notes')}
                     - Comments: {ticket.get('comments', 'No comments')}
-                    - User Question {question}
-                    provide helpful answer based on the ticket information above
                     """
         
         try:
-            llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
-            if not llm_service:
-                return f"Error: Unknown LLM type {llm_type}  "
-            
-            reuslt = await llm_service.ask(context)
-            return reuslt
+            message = self.agent_instance.claude.messages.create(
+                model="claude-sonnet-4-5-20250929",
+                max_tokens=1024,
+                messages=[{
+                    "role": "user",
+                    "content": f"""{context}
 
+                        User Question: {question}
+
+                        Provide a concise, helpful answer based on the ticket information above."""
+                }]
+            )
+            
+            return message.content[0].text
         except Exception as e:
             print(f"Error asking Claude: {e}", flush=True)
             return f"Sorry, I encountered an error: {str(e)}"

@@ -1,11 +1,12 @@
 import asyncio, anthropic, os
-from models.servicenow import ServiceNow
+from openai import OpenAI
 
 class NetworkAgent:
     
-    def __init__(self):
+    def __init__(self, servicenow_instance):
         self.claude = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.servicenow_instance = ServiceNow(agent_instance= self)
+        self.openai = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.servicenow_instance = servicenow_instance
 
     def start_servicenow(self):
         """Start the autonomous agent in a background thread"""

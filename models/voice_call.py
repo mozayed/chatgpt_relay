@@ -1,13 +1,13 @@
 import websockets, json, os, uuid, asyncio
 from datetime import datetime
-from models.tools import Tools
 from models.jobs import Jobs
 from models.servicenow import ServiceNow
 from models.agent import NetworkAgent
 
 class VoiceCall:
-    def __init__(self, call_id):
+    def __init__(self, call_id, servicenow_instance):
         self.call_id = call_id
+        self.servicenow_instance = servicenow_instance
 
     async def monitor_call(self):
     #Monitor call and handle function calls
@@ -79,8 +79,8 @@ class VoiceCall:
                             print(f"Asking Claude: {question}", flush=True)
                             
                             # Call network agent's Claude integration
-                            servicenow_instance = ServiceNow(agent_instance=NetworkAgent())
-                            answer = await servicenow_instance.ask_claude_with_context(question)
+                            
+                            answer = await self.servicenow_instance.ask_claude_with_context(question)
                             
                             print(f"Claude answered: {answer[:100]}...", flush=True)
                             
