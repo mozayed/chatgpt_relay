@@ -93,7 +93,13 @@ class VoiceCall:
                                     "output": answer
                                 }
                             }))
-                            
+
+        except websockets.exceptions.ConnectionClosedError:
+            print(f"Call {self.call_id} ended (connection closed)", flush=True)
+
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error: {e}", flush=True)  
+
         except Exception as e:
             print(f"Monitor error: {e}", flush=True)
             import traceback
