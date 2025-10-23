@@ -73,16 +73,16 @@ class VoiceCall:
                             }))
                         
                         # Handle ask_claude
-                        elif function_name == 'ask_claude':
+                        elif function_name == 'check_servicenow':
                             question = arguments.get('question', '')
                             
-                            print(f"Asking Claude: {question}", flush=True)
+                            print(f"Asking LLM: {question}", flush=True)
                             
-                            # Call network agent's Claude integration
+                            # Call network agent's LLM integration
                             
-                            answer = await self.servicenow_instance.ask_claude_with_context(question)
+                            answer = await self.servicenow_instance.ask_llm_with_context(question)
                             
-                            print(f"Claude answered: {answer[:100]}...", flush=True)
+                            print(f"LLM answered: {answer[:100]}...", flush=True)
                             
                             # Send result back to ChatGPT
                             await ws.send(json.dumps({

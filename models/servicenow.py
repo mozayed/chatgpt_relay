@@ -1,15 +1,17 @@
 import os, json, re, asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-from models.llm_factory import AbstractLLMServiceFactory
 
 class ServiceNow:
 
     processed_tickets = set()
 
-    def __init__(self, default_llm):
+    def __init__(self):
         self.aassignment_group = os.getenv("SERVICENOW_ASSIGNMENT_GROUP_ID", "16eb774083b836101bf4ffd6feaad360")
-        self.default_llm = default_llm
+        self.preferred_llm = None
+
+    def set_prederred_llm(self, llm):
+        self.preferred_llm = llm
 
     async def check_new_tickets(self, session):
         """Poll ServiceNow for new tickets assigned to Network_Agents group"""
@@ -27,14 +29,12 @@ class ServiceNow:
             print(f"Error fetching tickets: {e}", flush=True)
             return None
     
-    async def analyze_ticket(self, ticket, llm = None):
+    async def analyze_ticket(self, ticket):
         """Analyze ticket - Using default llm or overrided"""
         try:
             # llm chosen for the task
-            llm_type = llm if llm is not None else self.default_llm
-            llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
 
-            result = await llm_service.analyze(f'Analyze: {ticket}')
+            result = await self.preferred_llm.analyze(f'Analyze: {ticket}')
             return result
         except Exception as e:
             print(f"Error analyzing ticket: {e}", flush=True)
@@ -126,9 +126,7 @@ class ServiceNow:
         
         return {"success": False, "message": "No response"}
     
-    async def ask_llm_with_context(self, question, llm = None):
-
-        llm_type = llm if llm is not None else self.default_llm
+    async def ask_llm_with_context(self, question):
 
         """Ask LLM a question with ServiceNow context"""
         print(f"LLM query: {question}", flush=True)
@@ -161,18 +159,18 @@ class ServiceNow:
                     """
         
         try:
-            llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
-            if not llm_service:
-                return f"Error: Unknown LLM type {llm_type}  "
             
-            reuslt = await llm_service.ask(context)
+            reuslt = await self.preferred_llm.ask(context)
             return reuslt
 
         except Exception as e:
             print(f"Error asking Claude: {e}", flush=True)
             return f"Sorry, I encountered an error: {str(e)}"
         
-    async def start_servicenow_job(self):
+    async def start_servicenow_job(self, llm):
+        
+        self.set_prederred_llm(llm)
+
         """Main autonomous loop - monitors and processes tickets"""
         print("Starting Autonomous Agent Loop...", flush=True)
         print(f"Monitoring tickets for group: {os.getenv('SERVICENOW_ASSIGNMENT_GROUP_ID')}", flush=True)
