@@ -1,19 +1,21 @@
 import asyncio
 import threading
 from flask import Flask
-from dotenv import load_dotenv
 
 from models.servicenow import ServiceNow
 from models.onprem_bridge import OnPremBridge
 from models.agent import NetworkAgent
 from models.voice_agent import VoiceAgent
+from models.alert import Alert
+from models.engineer import Engineer
+from models.twilio_client import TwilioClient
 
 from routes.call import call_bp, init_call_routes
-from routes.alert import alert_bp
+from routes.alert import alert_bp, init_alert_routes
 from routes.onprem import onprem_bp, init_onprem_routes
 
 
-load_dotenv()
+
 
 app = Flask(__name__)
 
@@ -27,6 +29,9 @@ if __name__ == "__main__":
     print("[2/6] Creating services...")
     servicenow = ServiceNow()
     onprem_bridge = OnPremBridge()
+    twilio_client = TwilioClient()
+    alert_service = Alert()
+    engineer = Engineer()
     
     # 3. Create agents (thin coordinators)
     print("[3/6] Creating agents...")
@@ -37,6 +42,8 @@ if __name__ == "__main__":
     print("[4/6] Initializing routes...")
     init_call_routes(voice_agent, onprem_bridge)
     init_onprem_routes(onprem_bridge)
+    init_alert_routes(alert_service, engineer, twilio_client)
+
     app.register_blueprint(call_bp)
     app.register_blueprint(onprem_bp)
     app.register_blueprint(alert_bp)
@@ -54,12 +61,10 @@ if __name__ == "__main__":
     agent_thread.start()
     
     # 6. Start Flask
-    print("[6/6] Starting Flask server...")
     print("=" * 60)
     print("✅ Application Ready!")
-    print("   - Autonomous agent: Running")
-    print("   - Voice system: Ready")
+    print(f"   - Autonomous agent: Running (using {network_agent.preferred_llm})")
+    print(f"   - Voice system: Ready (using {voice_agent.preferred_llm})")
     print("   - HTTP server: http://0.0.0.0:5000")
-    print("=" * 60)
-    
+    print("=" * 60)    
     app.run(host='0.0.0.0', port=5000, debug=True)

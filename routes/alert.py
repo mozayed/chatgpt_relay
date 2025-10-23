@@ -1,40 +1,48 @@
 import os
 from flask import Blueprint, request, jsonify
 from twilio.twiml.voice_response import VoiceResponse, Dial
-from models.alerts import Alert
-from models.voice_agent import VoiceAgent
-from models.engineer import Engineer
 from urllib.parse import quote
 
 alert_bp = Blueprint('alert', __name__)
 
+# Module-level references (set by init)
+_alert_service = None
+_engineer = None
+_twilio_client = None
+
+def init_alert_routes(alert_service, engineer, twilio_client):
+    """Initialize alert routes with dependencies"""
+    global _alert_service, _engineer, _twilio_client
+    _alert_service = alert_service
+    _engineer = engineer
+    _twilio_client = twilio_client
+    print("✓ Alert routes initialized", flush=True)
+
 @alert_bp.route("/trigger_alert", methods=['POST'])
 def trigger_alert():
     """Receive alert from Grafana and trigger a phone call"""
-
-    voice_agent = VoiceAgent()
-    engineer = Engineer()
-    alert = Alert()
-
     data = request.json
     alert_message = data.get('message', 'Critical network alert')
-    alert.add_alert(alert_message)
     
-    print(f"Triggering alert call to {engineer.phone_number}: {alert_message}", flush=True)
+    # Store alert
+    _alert_service.add_alert(alert_message)
+    
+    print(f"Triggering alert call to {_engineer.phone_number}: {alert_message}", flush=True)
     
     try:
         encoded_message = quote(alert_message)
+        twiml_url = f"https://{request.host}/alert_twiml?message={encoded_message}"
         
-        call = voice_agent.twilio_client.calls.create(
-            to=engineer.phone_number,
-            from_=voice_agent.twilio_client,
-            url=f"https://{request.host}/alert_twiml?message={encoded_message}"
-        )
-        print(f"Alert call initiated: {call.sid}", flush=True)
-        return jsonify({"status": "success", "call_sid": call.sid})
+        call = _twilio_client.make_call(_engineer.phone_number, twiml_url)
+        
+        if call:
+            print(f"✓ Alert call initiated: {call.sid}", flush=True)
+            return jsonify({"status": "success", "call_sid": call.sid})
+        else:
+            return jsonify({"status": "error", "message": "Failed to initiate call"}), 500
     
     except Exception as e:
-        print(f"Failed to trigger alert: {e}", flush=True)
+        print(f"❌ Failed to trigger alert: {e}", flush=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @alert_bp.route("/alert_twiml", methods=['POST'])
