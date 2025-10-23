@@ -1,20 +1,21 @@
 import asyncio, threading, requests, os, json
 from flask import Blueprint, Response, request
 from models.voice_call import VoiceCall
-from models.voice_agent import VoiceAgent
 from models.tools import Tools
+from models.llm_services import OpenAiService
 
 call_bp = Blueprint('call', __name__)
-
-voice_agent = VoiceAgent()
 tools = Tools()
+
+
 
 @call_bp.route("/webhook", methods=['POST'])
 def webhook():
     """Receive incoming call webhook from OpenAI"""
     
     try:
-        event = voice_agent.openai_client.webhooks.unwrap(request.data, request.headers)
+        openai_service = OpenAiService()
+        event = openai_service.openai_client.webhooks.unwrap(request.data, request.headers)
     except Exception as e:
         print(f"Invalid webhook: {e}", flush=True)
         return Response("Invalid signature", status=400)
@@ -54,14 +55,14 @@ def webhook():
                         },
                         {
                             "type": "function",
-                            "name": "ask_claude",
-                            "description": "Ask Claude (the AI brain) about ServiceNow tickets, complex network issues, or any questions requiring deep analysis. Use this for ticket queries like 'What is the status of ticket INC001?'",
+                            "name": "check_service_now",
+                            "description": "Ask OpenAI (the AI brain) about ServiceNow tickets, complex network issues, or any questions requiring deep analysis. Use this for ticket queries like 'What is the status of ticket INC001?'",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
                                     "question": {
                                         "type": "string",
-                                        "description": "The question to ask Claude, including ticket numbers if mentioned"
+                                        "description": "The question to ask OpenAi, including ticket numbers if mentioned"
                                     }
                                 },
                                 "required": ["question"]
