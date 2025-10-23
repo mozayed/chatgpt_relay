@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # 5. Start autonomous agent
     print("[5/6] Starting autonomous agent...")
     agent_thread = threading.Thread(
-        target=network_agent.servicenow_instance.start_servicenow,
+        target=network_agent.servicenow_instance.start_servicenow_job,
         daemon=True
     )
     agent_thread.start()

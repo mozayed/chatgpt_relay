@@ -1,17 +1,20 @@
 import os, json, re, asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from models.llm_factory import AbstractLLMServiceFactory
 
 class ServiceNow:
 
     processed_tickets = set()
 
     def __init__(self):
-        self.aassignment_group = os.getenv("SERVICENOW_ASSIGNMENT_GROUP_ID", "16eb774083b836101bf4ffd6feaad360")
-        self.preferred_llm = None
+        self.assignment_group = os.getenv("SERVICENOW_ASSIGNMENT_GROUP_ID", "16eb774083b836101bf4ffd6feaad360")
+        self.preferred_llm = None  # Stores LLM TYPE (string like "Claude"), not instance
 
-    def set_prederred_llm(self, llm):
-        self.preferred_llm = llm
+    def set_preferred_llm(self, llm_type):
+        """Set preferred LLM type"""
+        self.preferred_llm = llm_type
+        print(f"ServiceNow preferred LLM set to: {llm_type}", flush=True)
 
     async def check_new_tickets(self, session):
         """Poll ServiceNow for new tickets assigned to Network_Agents group"""
@@ -21,7 +24,7 @@ class ServiceNow:
                 {
                     "state": "1",
                     "limit": 10,
-                    "assignment_group": self.aassignment_group
+                    "assignment_group": self.assignment_group
                 }
             )
             return result
@@ -29,12 +32,23 @@ class ServiceNow:
             print(f"Error fetching tickets: {e}", flush=True)
             return None
     
-    async def analyze_ticket(self, ticket):
-        """Analyze ticket - Using default llm or overrided"""
+    async def analyze_ticket(self, ticket, llm=None):
+        """Analyze ticket - can override LLM per call"""
         try:
-            # llm chosen for the task
-
-            result = await self.preferred_llm.analyze(f'Analyze: {ticket}')
+            # Choose LLM type (override or default)
+            llm_type = llm if llm is not None else self.preferred_llm
+            
+            # Create LLM service via factory
+            llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
+            
+            # Use it
+            result = await llm_service.analyze(f"""Analyze this ServiceNow ticket:
+                Number: {ticket.get('number', 'N/A')}
+                Short Description: {ticket.get('short_description', 'N/A')}
+                Description: {ticket.get('description', 'N/A')}
+                
+                What type of issue is this? Can it be automated? Provide a brief analysis.""")
+            
             return result
         except Exception as e:
             print(f"Error analyzing ticket: {e}", flush=True)
@@ -57,22 +71,22 @@ class ServiceNow:
             print(f"Error updating ticket: {e}", flush=True)
             return None
         
-    async def process_ticket(self, session, ticket):
+    async def process_ticket(self, session, ticket, llm=None):
         """Process a single ticket - analyze and take ownership"""
         print(f"Processing: {ticket.get('number')} - {ticket.get('short_description')}", flush=True)
         
-        # Analyze the ticket
-        analysis = await self.analyze_ticket(ticket)
+        # Analyze the ticket (pass llm if overriding)
+        analysis = await self.analyze_ticket(ticket, llm=llm)
         
         if analysis:
             sys_id = ticket.get('sys_id')
             if sys_id:
                 work_notes = f"""AI Agent Analysis: {analysis}
 
-                ---
-                Status: Ticket taken by AI Agent
-                State changed: New → In Progress
-                Assigned to: ai_user"""
+---
+Status: Ticket taken by AI Agent
+State changed: New → In Progress
+Assigned to: ai_user"""
                 
                 update_result = await self.take_ticket_ownership(session, sys_id, work_notes)
                 
@@ -126,10 +140,12 @@ class ServiceNow:
         
         return {"success": False, "message": "No response"}
     
-    async def ask_llm_with_context(self, question):
-
-        """Ask LLM a question with ServiceNow context"""
+    async def ask_llm_with_context(self, question, llm=None):
+        """Ask LLM a question with ServiceNow context - can override LLM per call"""
         print(f"LLM query: {question}", flush=True)
+        
+        # Choose LLM type (override or default)
+        llm_type = llm if llm is not None else self.preferred_llm
         
         # Extract ticket number if mentioned
         ticket_match = re.search(r'INC\d+', question, re.IGNORECASE)
@@ -143,37 +159,43 @@ class ServiceNow:
             if ticket_data.get('success'):
                 ticket = ticket_data.get('ticket', {})
                 context = f"""
-                    Ticket Information:
-                    - Number: {ticket.get('number')}
-                    - Short Description: {ticket.get('short_description')}
-                    - Description: {ticket.get('description')}
-                    - State: {ticket.get('state')}
-                    - Priority: {ticket.get('priority')}
-                    - Assigned To: {ticket.get('assigned_to')}
-                    - Created: {ticket.get('created_on')}
-                    - Updated: {ticket.get('updated_on')}
-                    - Work Notes: {ticket.get('work_notes', 'No work notes')}
-                    - Comments: {ticket.get('comments', 'No comments')}
-                    - User Question {question}
-                    provide helpful answer based on the ticket information above
-                    """
+Ticket Information:
+- Number: {ticket.get('number')}
+- Short Description: {ticket.get('short_description')}
+- Description: {ticket.get('description')}
+- State: {ticket.get('state')}
+- Priority: {ticket.get('priority')}
+- Assigned To: {ticket.get('assigned_to')}
+- Created: {ticket.get('created_on')}
+- Updated: {ticket.get('updated_on')}
+- Work Notes: {ticket.get('work_notes', 'No work notes')}
+- Comments: {ticket.get('comments', 'No comments')}
+
+User Question: {question}
+
+Provide helpful answer based on the ticket information above."""
         
         try:
+            # Create LLM service via factory
+            llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
             
-            reuslt = await self.preferred_llm.ask(context)
-            return reuslt
+            # Use it
+            result = await llm_service.ask(context)
+            return result
 
         except Exception as e:
             print(f"Error asking LLM: {e}", flush=True)
             return f"Sorry, I encountered an error: {str(e)}"
         
-    async def start_servicenow_job(self, llm):
-        
-        self.set_prederred_llm(llm)
-
+    async def start_servicenow_job(self, llm_type):
         """Main autonomous loop - monitors and processes tickets"""
+        
+        # Set preferred LLM type
+        self.set_preferred_llm(llm_type)
+        
         print("Starting Autonomous Agent Loop...", flush=True)
-        print(f"Monitoring tickets for group: {os.getenv('SERVICENOW_ASSIGNMENT_GROUP_ID')}", flush=True)
+        print(f"Using LLM: {self.preferred_llm}", flush=True)
+        print(f"Monitoring tickets for group: {self.assignment_group}", flush=True)
         
         server_params = StdioServerParameters(
             command="python",
@@ -208,6 +230,7 @@ class ServiceNow:
                                         print(f"Found {len(new_tickets)} NEW unprocessed ticket(s)", flush=True)
                                         
                                         for ticket in new_tickets:
+                                            # Uses self.preferred_llm
                                             await self.process_ticket(session, ticket)
                                     else:
                                         if tickets:

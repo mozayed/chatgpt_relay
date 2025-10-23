@@ -3,12 +3,11 @@ from openai import OpenAI
 
 class NetworkAgent:
     
-    def __init__(self, servicenow_instance, llm_factory):
+    def __init__(self, servicenow_instance):
         self.claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.servicenow_instance = servicenow_instance
         self.preferred_llm = "Claude"
-        self.llm_factory = llm_factory
     
     def set_preferred_llm(self, llm):
         self.preferred_llm = llm

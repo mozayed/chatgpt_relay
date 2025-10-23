@@ -6,11 +6,10 @@ from models.voice.tool_call_router import ToolCallRouter
 class VoiceAgent:
     """Voice Agent - coordinates voice call system"""
     
-    def __init__(self, servicenow, onprem_bridge, llm_factory):
+    def __init__(self, servicenow, onprem_bridge):
         # Store references (like NetworkAgent)
         self.servicenow_instance = servicenow
         self.onprem_bridge = onprem_bridge
-        self.llm_factory = llm_factory
         self.preferred_llm = "OPENAI"
         
         # Create voice system components
