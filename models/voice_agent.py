@@ -1,19 +1,30 @@
-import os, anthropic
-from openai import OpenAI
-from twilio.rest import Client
+from models.voice.webhook_handler import WebhookHandler
+from models.voice.call_acceptor import CallAcceptor
+from models.voice.call_monitor import CallMonitor
+from models.voice.tool_call_router import ToolCallRouter
 
-class VoiceAgent():
-    def __init__(self, servicenow_instance, llm_factory ):
-        self.openai_client = OpenAI(webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET"))
-        self.claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
-        self.Twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER")
-        self.default_llm = "OPENAI"
-        self.servicenow_instance = servicenow_instance
+class VoiceAgent:
+    """Voice Agent - coordinates voice call system"""
+    
+    def __init__(self, servicenow, onprem_bridge, llm_factory):
+        # Store references (like NetworkAgent)
+        self.servicenow_instance = servicenow
+        self.onprem_bridge = onprem_bridge
         self.llm_factory = llm_factory
+        self.preferred_llm = "OPENAI"
         
-
-    def get_call(self):
-        pass
-    def get_alerts(Self):
-        pass
+        # Create voice system components
+        self._tool_router = ToolCallRouter(servicenow, onprem_bridge, self.preferred_llm)
+        self._call_monitor = CallMonitor(self._tool_router)
+        self._call_acceptor = CallAcceptor()
+        self._webhook_handler = WebhookHandler(self._call_acceptor, self._call_monitor)
+    
+    def handle_webhook(self, event):
+        """Handle incoming webhook (called by route)"""
+        return self._webhook_handler.handle(event)
+    
+    def change_llm(self, llm_name):
+        """Change LLM preference"""
+        self.preferred_llm = llm_name
+        self._tool_router.llm_choice = llm_name
+        print(f"VoiceAgent LLM changed to: {llm_name}", flush=True)
