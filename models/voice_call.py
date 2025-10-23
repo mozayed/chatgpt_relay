@@ -3,11 +3,12 @@ from datetime import datetime
 from models.jobs import Jobs
 from models.servicenow import ServiceNow
 from models.agent import NetworkAgent
+from app import voice_agent
 
 class VoiceCall:
-    def __init__(self, call_id, servicenow_instance):
+    def __init__(self, call_id):
         self.call_id = call_id
-        self.servicenow_instance = servicenow_instance
+        self.servicenow_instance = voice_agent.servicenow_instance
 
     async def monitor_call(self):
     #Monitor call and handle function calls
