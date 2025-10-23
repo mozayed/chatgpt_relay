@@ -1,10 +1,11 @@
 import websockets, json, os, uuid, asyncio
 from datetime import datetime
 from models.jobs import Jobs
-from app import servicenow_instance
+from models.servicenow import ServiceNow
 class VoiceCall:
-    def __init__(self, call_id):
+    def __init__(self, call_id, servicenow_instance):
         self.call_id = call_id
+        self.servicenow_instance = ServiceNow()
 
     async def monitor_call(self):
     #Monitor call and handle function calls
@@ -77,7 +78,7 @@ class VoiceCall:
                             
                             # Call network agent's LLM integration
                             
-                            answer = await servicenow_instance.ask_llm_with_context(question)
+                            answer = await self.servicenow_instance.ask_llm_with_context(question)
                             
                             print(f"LLM answered: {answer[:100]}...", flush=True)
                             
