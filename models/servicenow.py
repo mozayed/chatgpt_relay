@@ -99,7 +99,7 @@ Assigned to: ai_user"""
         
         return False
     
-    async def query_ticket_by_number(self, ticket_number):
+    async def get_ticket_data(self, ticket_number):
         """Query a specific ticket by number - for voice queries"""
         print(f"Querying ticket: {ticket_number}", flush=True)
         
@@ -154,7 +154,7 @@ Assigned to: ai_user"""
 
         if ticket_match:
             ticket_number = ticket_match.group(0).upper()
-            ticket_data = await self.query_ticket_by_number(ticket_number)
+            ticket_data = await self.get_ticket_data(ticket_number)
             
             if ticket_data.get('success'):
                 ticket = ticket_data.get('ticket', {})
