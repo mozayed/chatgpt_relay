@@ -1,4 +1,4 @@
-import os
+import asyncio
 import threading
 from flask import Flask
 from dotenv import load_dotenv
@@ -7,7 +7,6 @@ from models.servicenow import ServiceNow
 from models.onprem_bridge import OnPremBridge
 from models.agent import NetworkAgent
 from models.voice_agent import VoiceAgent
-from models.llm_factory import AbstractLLMServiceFactory
 
 from routes.call import call_bp, init_call_routes
 from routes.alert import alert_bp
@@ -23,9 +22,6 @@ if __name__ == "__main__":
     print("🚀 Starting AI Agent Application")
     print("=" * 60)
     
-    # 1. Create LLM factory
-    print("\n[1/6] Creating LLM factory...")
-    llm_factory = AbstractLLMServiceFactory()
     
     # 2. Create services
     print("[2/6] Creating services...")
@@ -34,8 +30,8 @@ if __name__ == "__main__":
     
     # 3. Create agents (thin coordinators)
     print("[3/6] Creating agents...")
-    network_agent = NetworkAgent(servicenow, llm_factory)
-    voice_agent = VoiceAgent(servicenow, onprem_bridge, llm_factory)
+    network_agent = NetworkAgent(servicenow)
+    voice_agent = VoiceAgent(servicenow, onprem_bridge)
     
     # 4. Initialize routes
     print("[4/6] Initializing routes...")
@@ -48,7 +44,11 @@ if __name__ == "__main__":
     # 5. Start autonomous agent
     print("[5/6] Starting autonomous agent...")
     agent_thread = threading.Thread(
-        target=network_agent.servicenow_instance.start_servicenow_job,
+        target=lambda: asyncio.run(
+            network_agent.servicenow_instance.start_servicenow_job(
+                llm_type=network_agent.preferred_llm  # Pass agent's LLM preference
+            )
+        ),
         daemon=True
     )
     agent_thread.start()
