@@ -3,7 +3,7 @@ from datetime import datetime
 from models.jobs import Jobs
 from models.servicenow import ServiceNow
 from models.agent import NetworkAgent
-from app import voice_agent
+from resources import voice_agent
 
 class VoiceCall:
     def __init__(self, call_id):
