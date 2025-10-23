@@ -3,7 +3,7 @@ from datetime import datetime
 from models.jobs import Jobs
 from models.servicenow import ServiceNow
 class VoiceCall:
-    def __init__(self, call_id, servicenow_instance):
+    def __init__(self, call_id):
         self.call_id = call_id
         self.servicenow_instance = ServiceNow()
 
