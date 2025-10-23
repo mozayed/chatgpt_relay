@@ -16,7 +16,7 @@ class CallAcceptor:
                 json={
                     "type": "realtime",
                     "model": "gpt-4o-realtime-preview-2024-10-01",
-                             "instructions": """You are an AI network agent for ServiceNow tickets and network devices.""",
+                    "instructions": """You are an AI network agent for ServiceNow tickets and network devices.""",
                     "tools": [
                         {
                             "type": "function",
