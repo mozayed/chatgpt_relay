@@ -16,19 +16,7 @@ class CallAcceptor:
                 json={
                     "type": "realtime",
                     "model": "gpt-4o-realtime-preview-2024-10-01",
-                             "instructions": """You are an AI network agent for ServiceNow tickets and network devices.
-
-                            CRITICAL BEHAVIOR:
-                            - When you call a function, ALWAYS speak the results immediately
-                            - Never say "I'm checking..." and then stay silent
-                            - After calling query_servicenow_ticket, immediately tell the user what you found
-                            - Be conversational and helpful
-
-                            Example flow:
-                            User: "What's ticket INC001 about?"
-                            You: "Let me check that for you..." [calls tool] [receives data] "Ticket INC001 is about network connectivity issues. It was created on..."
-
-                            Never stop talking after getting function results - always narrate what you found.""",
+                             "instructions": """You are an AI network agent for ServiceNow tickets and network devices.""",
                     "tools": [
                         {
                             "type": "function",
