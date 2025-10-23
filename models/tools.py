@@ -21,14 +21,14 @@ class Tools:
                         },
                         {
                             "type": "function",
-                            "name": "ask_claude",
+                            "name": "ask_servicenow",
                             "description": "Ask Claude (the AI brain) about ServiceNow tickets, complex network issues, or any questions requiring deep analysis. Use this for ticket queries like 'What is the status of ticket INC001?'",
                             "parameters": {
                                 "type": "object",
                                 "properties": {
                                     "question": {
                                         "type": "string",
-                                        "description": "The question to ask Claude, including ticket numbers if mentioned"
+                                        "description": "The question to ask OpenAI, including ticket numbers if mentioned"
                                     }
                                 },
                                 "required": ["question"]

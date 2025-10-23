@@ -164,7 +164,7 @@ class ServiceNow:
             return reuslt
 
         except Exception as e:
-            print(f"Error asking Claude: {e}", flush=True)
+            print(f"Error asking LLM: {e}", flush=True)
             return f"Sorry, I encountered an error: {str(e)}"
         
     async def start_servicenow_job(self, llm):

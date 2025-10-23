@@ -55,7 +55,7 @@ def webhook():
                         },
                         {
                             "type": "function",
-                            "name": "check_servicenow",
+                            "name": "ask_servicenow",
                             "description": "Ask OpenAI (the AI brain) about ServiceNow tickets, complex network issues, or any questions requiring deep analysis. Use this for ticket queries like 'What is the status of ticket INC001?'",
                             "parameters": {
                                 "type": "object",

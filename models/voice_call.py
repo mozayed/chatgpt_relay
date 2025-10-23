@@ -70,8 +70,8 @@ class VoiceCall:
                                 }
                             }))
                         
-                        # Handle ask_claude
-                        elif function_name == 'check_servicenow':
+                        # Handle ask_LLM
+                        elif function_name == 'ask_servicenow':
                             question = arguments.get('question', '')
                             
                             print(f"Asking LLM: {question}", flush=True)
