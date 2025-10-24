@@ -25,21 +25,21 @@ if __name__ == "__main__":
     print("=" * 60)
     
     
-    # 2. Create services
-    print("[2/6] Creating services...")
+    # 1. Create services
+    print("[1/5] Creating services...")
     servicenow = ServiceNow()
     onprem_bridge = OnPremBridge()
     twilio_client = TwilioClient()
     alert_service = Alert()
     engineer = Engineer()
     
-    # 3. Create agents (thin coordinators)
-    print("[3/6] Creating agents...")
+    # 2. Create agents (thin coordinators)
+    print("[2/5] Creating agents...")
     network_agent = NetworkAgent(servicenow)
     voice_agent = VoiceAgent(servicenow, onprem_bridge)
     
     # 4. Initialize routes
-    print("[4/6] Initializing routes...")
+    print("[3/5] Initializing routes...")
     init_call_routes(voice_agent, onprem_bridge)
     init_onprem_routes(onprem_bridge)
     init_alert_routes(alert_service, engineer, twilio_client)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     app.register_blueprint(alert_bp)
     
     # 5. Start autonomous agent
-    print("[5/6] Starting autonomous agent...")
+    print("[4/5] Starting autonomous agent...")
     agent_thread = threading.Thread(
         target=lambda: asyncio.run(
             network_agent.servicenow_instance.start_servicenow_job(
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     )
     agent_thread.start()
     
-    # 6. Start Flask
+    # 5. Start Flask
     print("=" * 60)
     print("✅ Application Ready!")
     print(f"   - Autonomous agent: Running (using {network_agent.preferred_llm})")

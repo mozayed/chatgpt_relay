@@ -1,4 +1,4 @@
-import os, json
+import os
 from flask import Blueprint, request, jsonify
 from twilio.twiml.voice_response import VoiceResponse, Dial
 from urllib.parse import quote
