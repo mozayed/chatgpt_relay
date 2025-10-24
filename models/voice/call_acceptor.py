@@ -29,7 +29,7 @@ class CallAcceptor:
 
                     You can:
                     - Query, create, update, and close ServiceNow tickets
-                    - Check network device information (VLANs, CDP, interfaces, spanning tree)""",
+                    - Check network device information (VLANs, CDP, ntp, spanning tree)""",
                     "tools": all_tools
                 }
             )

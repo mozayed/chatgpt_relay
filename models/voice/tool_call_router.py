@@ -33,7 +33,7 @@ class ToolCallRouter:
             return await self.servicenow.close_ticket(ticket_number, resolution_notes, close_code)
 
         # On-prem network device tools
-        elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_interfaces', 'get_device_spanning_tree']:
+        elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_ntp', 'get_device_spanning_tree']:
             return await self.onprem_bridge.execute_tool(function_name, arguments)
         
         else:
