@@ -8,7 +8,7 @@ class LLMServices(ABC):
 
 class OpenAiService(LLMServices):
     def __init__(self):
-        self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.openai_webhook = OpenAI(webhook_secret=os.getenv("OPENAI_WEBHOOK_SECRET")) 
 
     async def analyze(self, content):
@@ -36,7 +36,7 @@ class OpenAiService(LLMServices):
 
 class ClaudeService(LLMServices):
     def __init__(self):
-        self.claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+        self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
 
     async def analyze(self, content):
         """Analyze with Claude"""
