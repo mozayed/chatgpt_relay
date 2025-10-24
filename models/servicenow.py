@@ -129,17 +129,28 @@ class ServiceNow:
         return {"success": False, "message": "No response"}
 
     async def close_ticket(self, ticket_number, resolution_notes, close_code="Solved"):
-        """Close a ServiceNow ticket"""
+        """Close a ServiceNow ticket - two-step process"""
         print(f"Closing ticket: {ticket_number}", flush=True)
         
-        # Update with resolution notes and close state
-        result = await self.update_ticket(
+        # Step 1: Move to Resolved (state 6) with resolution notes
+        print(f"Step 1: Resolving ticket...", flush=True)
+        resolve_result = await self.update_ticket(
             ticket_number=ticket_number,
             work_notes=f"Resolution: {resolution_notes}\nClose Code: {close_code}",
-            state="7"  # 7 = Closed
+            state="6"  # Resolved first
         )
         
-        return result
+        if not resolve_result.get('success'):
+            return resolve_result
+        
+        # Step 2: Move to Closed (state 7)
+        print(f"Step 2: Closing ticket...", flush=True)
+        close_result = await self.update_ticket(
+            ticket_number=ticket_number,
+            state="7"  # Now close it
+        )
+        
+        return close_result
 
     async def check_new_tickets(self, session):
         """Poll ServiceNow for new tickets assigned to Network_Agents group"""
