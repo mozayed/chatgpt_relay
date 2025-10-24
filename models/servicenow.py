@@ -46,13 +46,14 @@ class ServiceNow:
                         print(f"Create ticket response: {data}", flush=True)
                         
                         if data.get('success'):
-                            ticket_number = data.get('incident', {}).get('number')
+                            ticket_number = data.get('incident_number')
+                            sys_id = data.get('incident_id')
                             print(f"✓ Created ticket: {ticket_number}", flush=True)
 
                             return {
                                 "success": True,
                                 "ticket_number": ticket_number,
-                                "sys_id": data.get('incident', {}).get('sys_id'),
+                                "sys_id": sys_id,
                                 "message": f"Ticket {ticket_number} created successfully"
                             }
                         else:
