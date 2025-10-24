@@ -33,8 +33,8 @@ ONPREM_TOOLS = [
     },
     {
         "type": "function",
-        "name": "get_device_interfaces",
-        "description": "Get interface information from a network device",
+        "name": "get_device_ntp",
+        "description": "Get ntp information from a network device",
         "parameters": {
             "type": "object",
             "properties": {
