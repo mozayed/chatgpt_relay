@@ -43,11 +43,17 @@ class ServiceNow:
                     
                     if result and result.content:
                         data = json.loads(result.content[0].text)
+                        print(f"Create ticket response: {data}", flush=True)
+                        
                         if data.get('success'):
+                            ticket_number = data.get('incident', {}).get('number')
+                            print(f"✓ Created ticket: {ticket_number}", flush=True)
+
                             return {
                                 "success": True,
-                                "ticket_number": data.get('incident', {}).get('number'),
-                                "sys_id": data.get('incident', {}).get('sys_id')
+                                "ticket_number": ticket_number,
+                                "sys_id": data.get('incident', {}).get('sys_id'),
+                                "message": f"Ticket {ticket_number} created successfully"
                             }
                         else:
                             return {"success": False, "message": data.get('message')}
@@ -343,4 +349,4 @@ Provide helpful answer based on the ticket information above."""
                         import traceback
                         traceback.print_exc()
                     
-                    await asyncio.sleep(60)  # Check every 60 seconds
+                    await asyncio.sleep(300)  # Check every 300 seconds
