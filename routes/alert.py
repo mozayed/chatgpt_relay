@@ -1,4 +1,4 @@
-import os
+import os, json
 from flask import Blueprint, request, jsonify
 from twilio.twiml.voice_response import VoiceResponse, Dial
 from urllib.parse import quote
@@ -22,7 +22,12 @@ def init_alert_routes(alert_service, engineer, twilio_client):
 def trigger_alert():
     """Receive alert from Grafana and trigger a phone call"""
     data = request.json
+    print("=" * 50)
+    print("FULL GRAFANA PAYLOAD:")
+    print(json.dumps(data, indent=2))
+    print("=" * 50)
     alert_message = data.get('message', 'Critical network alert')
+
     
     # Store alert
     _alert_service.add_alert(alert_message)
