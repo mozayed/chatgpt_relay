@@ -69,14 +69,21 @@ class ServiceNow:
         """Update an existing ServiceNow ticket"""
         print(f"Updating ticket: {ticket_number}", flush=True)
         
-        # First get the sys_id
-        ticket_data = await self.get_ticket_data(ticket_number)
-        if isinstance(ticket_data, dict) and ticket_data.get('error'):
+        # First get the ticket to find sys_id
+        ticket_query_result = await self.query_ticket_by_number(ticket_number)
+        
+        if not ticket_query_result.get('success'):
+            print(f"✗ Failed to find ticket {ticket_number}", flush=True)
             return {"success": False, "message": "Ticket not found"}
         
-        sys_id = ticket_data.get('sys_id')
+        ticket = ticket_query_result.get('ticket', {})
+        sys_id = ticket.get('sys_id')
+        
         if not sys_id:
+            print(f"✗ No sys_id found for {ticket_number}", flush=True)
             return {"success": False, "message": "Could not get ticket sys_id"}
+        
+        print(f"Found sys_id: {sys_id}", flush=True)
         
         server_params = StdioServerParameters(
             command="python",
@@ -95,14 +102,28 @@ class ServiceNow:
                     if state:
                         update_data["state"] = state
                     
+                    print(f"Calling update_incident with: {update_data}", flush=True)
+                    
                     result = await session.call_tool("update_incident", update_data)
                     
                     if result and result.content:
                         data = json.loads(result.content[0].text)
-                        return {"success": data.get('success', False)}
+                        print(f"Update result: {data}", flush=True)
+                        
+                        if data.get('success'):
+                            print(f"✓ Updated ticket {ticket_number}", flush=True)
+                            return {
+                                "success": True,
+                                "message": f"Ticket {ticket_number} updated successfully"
+                            }
+                        else:
+                            print(f"✗ Update failed: {data.get('message')}", flush=True)
+                            return {"success": False, "message": data.get('message')}
                     
                 except Exception as e:
-                    print(f"Error updating ticket: {e}", flush=True)
+                    print(f"✗ Error updating ticket: {e}", flush=True)
+                    import traceback
+                    traceback.print_exc()
                     return {"success": False, "message": str(e)}
         
         return {"success": False, "message": "No response"}
