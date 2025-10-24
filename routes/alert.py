@@ -22,12 +22,12 @@ def init_alert_routes(alert_service, engineer, twilio_client):
 def trigger_alert():
     """Receive alert from Grafana and trigger a phone call"""
     data = request.json
-    print("=" * 50)
-    print("FULL GRAFANA PAYLOAD:")
-    print(json.dumps(data, indent=2))
-    print("=" * 50)
-    alert_message = data.get('message', 'Critical network alert')
-
+  
+    # alert_message = data.get('message', 'Critical network alert')
+    if data.get('alerts') and len(data['alerts']) > 0:
+        alert = data['alerts'][0]
+        annotations = alert.get('annotations', {})
+        alert_message = annotations.get('summary', data.get('title', 'Network Alert'))
     
     # Store alert
     _alert_service.add_alert(alert_message)
