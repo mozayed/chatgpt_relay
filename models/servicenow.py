@@ -70,7 +70,7 @@ class ServiceNow:
         print(f"Updating ticket: {ticket_number}", flush=True)
         
         # First get the ticket to find sys_id
-        ticket_query_result = await self.query_ticket_by_number(ticket_number)
+        ticket_query_result = await self.get_ticket_data(ticket_number)
         
         if not ticket_query_result.get('success'):
             print(f"✗ Failed to find ticket {ticket_number}", flush=True)
