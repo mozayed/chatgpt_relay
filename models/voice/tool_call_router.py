@@ -14,7 +14,26 @@ class ToolCallRouter:
             ticket_number = arguments.get('ticket_number')
             return await self.servicenow.get_ticket_data(ticket_number)
         
-        elif function_name == 'get_device_vlans':
+        elif function_name == 'create_servicenow_ticket':
+            short_desc = arguments.get('short_description')
+            description = arguments.get('description')
+            priority = arguments.get('priority', '3')
+            return await self.servicenow.create_ticket(short_desc, description, priority)
+        
+        elif function_name == 'update_servicenow_ticket':
+            ticket_number = arguments.get('ticket_number')
+            work_notes = arguments.get('work_notes')
+            state = arguments.get('state')
+            return await self.servicenow.update_ticket(ticket_number, work_notes, state)
+        
+        elif function_name == 'close_servicenow_ticket':
+            ticket_number = arguments.get('ticket_number')
+            resolution_notes = arguments.get('resolution_notes')
+            close_code = arguments.get('close_code', 'Solved')
+            return await self.servicenow.close_ticket(ticket_number, resolution_notes, close_code)
+
+        # On-prem network device tools
+        elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_interfaces', 'get_device_spanning_tree']:
             return await self.onprem_bridge.execute_tool(function_name, arguments)
         
         else:

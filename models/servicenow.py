@@ -16,6 +16,103 @@ class ServiceNow:
         self.preferred_llm = llm_type
         print(f"ServiceNow preferred LLM set to: {llm_type}", flush=True)
 
+    async def create_ticket(self, short_description, description, priority="3"):
+        """Create a new ServiceNow ticket"""
+        print(f"Creating ticket: {short_description}", flush=True)
+        
+        server_params = StdioServerParameters(
+            command="python",
+            args=["-m", "servicenow_mcp.cli"],
+            env=dict(os.environ)
+        )
+        
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                
+                try:
+                    result = await session.call_tool(
+                        "create_incident",
+                        {
+                            "short_description": short_description,
+                            "description": description,
+                            "priority": priority,
+                            "assignment_group": self.assignment_group
+                        }
+                    )
+                    
+                    if result and result.content:
+                        data = json.loads(result.content[0].text)
+                        if data.get('success'):
+                            return {
+                                "success": True,
+                                "ticket_number": data.get('incident', {}).get('number'),
+                                "sys_id": data.get('incident', {}).get('sys_id')
+                            }
+                        else:
+                            return {"success": False, "message": data.get('message')}
+                    
+                except Exception as e:
+                    print(f"Error creating ticket: {e}", flush=True)
+                    return {"success": False, "message": str(e)}
+        
+        return {"success": False, "message": "No response"}
+
+    async def update_ticket(self, ticket_number, work_notes=None, state=None):
+        """Update an existing ServiceNow ticket"""
+        print(f"Updating ticket: {ticket_number}", flush=True)
+        
+        # First get the sys_id
+        ticket_data = await self.get_ticket_data(ticket_number)
+        if isinstance(ticket_data, dict) and ticket_data.get('error'):
+            return {"success": False, "message": "Ticket not found"}
+        
+        sys_id = ticket_data.get('sys_id')
+        if not sys_id:
+            return {"success": False, "message": "Could not get ticket sys_id"}
+        
+        server_params = StdioServerParameters(
+            command="python",
+            args=["-m", "servicenow_mcp.cli"],
+            env=dict(os.environ)
+        )
+        
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                
+                try:
+                    update_data = {"incident_id": sys_id}
+                    if work_notes:
+                        update_data["work_notes"] = work_notes
+                    if state:
+                        update_data["state"] = state
+                    
+                    result = await session.call_tool("update_incident", update_data)
+                    
+                    if result and result.content:
+                        data = json.loads(result.content[0].text)
+                        return {"success": data.get('success', False)}
+                    
+                except Exception as e:
+                    print(f"Error updating ticket: {e}", flush=True)
+                    return {"success": False, "message": str(e)}
+        
+        return {"success": False, "message": "No response"}
+
+    async def close_ticket(self, ticket_number, resolution_notes, close_code="Solved"):
+        """Close a ServiceNow ticket"""
+        print(f"Closing ticket: {ticket_number}", flush=True)
+        
+        # Update with resolution notes and close state
+        result = await self.update_ticket(
+            ticket_number=ticket_number,
+            work_notes=f"Resolution: {resolution_notes}\nClose Code: {close_code}",
+            state="7"  # 7 = Closed
+        )
+        
+        return result
+
     async def check_new_tickets(self, session):
         """Poll ServiceNow for new tickets assigned to Network_Agents group"""
         try:
