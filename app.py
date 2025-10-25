@@ -57,7 +57,7 @@ if __name__ == "__main__":
     print("[4/5] Starting autonomous agent...")
     agent_thread = threading.Thread(
         target=lambda: asyncio.run(
-            network_agent.servicenow_instance.start_servicenow_job(
+            network_agent.start_servicenow(
                 llm_type=network_agent.preferred_llm  # Pass agent's LLM preference
             )
         ),
