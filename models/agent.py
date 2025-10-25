@@ -18,6 +18,10 @@ class NetworkAgent:
 
     def start_servicenow(self, llm):
         """Start the autonomous agent in a background thread"""
+        print(f"=" * 60, flush=True)
+        print(f"🚀 NetworkAgent.start_servicenow() CALLED", flush=True)
+        print(f"   RAG service exists: {self.rag_service is not None}", flush=True)
+        print(f"=" * 60, flush=True)
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         self.set_preferred_llm(llm)
