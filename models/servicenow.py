@@ -168,33 +168,46 @@ class ServiceNow:
             print(f"Error fetching tickets: {e}", flush=True)
             return None
     
-    async def analyze_ticket(self, ticket, llm=None, rag_service= None):
-        """Analyze ticket - can override LLM per call - with optianal RAG context"""
+    async def analyze_ticket(self, ticket, llm=None, rag_service=None):
+        """Analyze ticket - with optional RAG context"""
         try:
+            # Debug logging
+            print(f"=== ANALYZE TICKET DEBUG ===", flush=True)
+            print(f"RAG service provided: {rag_service is not None}", flush=True)
+            print(f"Ticket: {ticket.get('number')}", flush=True)
+            
+            # Choose LLM type
             llm_type = llm if llm is not None else self.preferred_llm
             llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
             
             # Build ticket description
             ticket_text = f"""
-            Number: {ticket.get('number', 'N/A')}
-            Short Description: {ticket.get('short_description', 'N/A')}
-            Description: {ticket.get('description', 'N/A')}
-            """
+    Number: {ticket.get('number', 'N/A')}
+    Short Description: {ticket.get('short_description', 'N/A')}
+    Description: {ticket.get('description', 'N/A')}
+    """
             
             # Search RAG for relevant documentation
             context = ""
             if rag_service:
+                print("✓ RAG service available, searching...", flush=True)
                 try:
                     docs = rag_service.search(ticket_text, top_k=2)
+                    print(f"✓ RAG returned {len(docs)} documents", flush=True)
                     if docs:
                         context = "\n\n=== RELEVANT DOCUMENTATION ===\n"
                         for i, doc in enumerate(docs):
                             context += f"\n[Document {i+1} from {doc['source']}]:\n{doc['text']}\n"
+                            print(f"  - Doc {i+1}: {doc['source']} (score: {doc['score']:.3f})", flush=True)
                         context += "\n=== END DOCUMENTATION ===\n"
                 except Exception as e:
-                    print(f"RAG search failed: {e}", flush=True)
+                    print(f"❌ RAG search failed: {e}", flush=True)
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print("❌ No RAG service provided!", flush=True)
             
-            # Analyze with context
+            # Build analysis prompt
             prompt = f"""{context}
 
     Analyze this ServiceNow ticket:
@@ -203,11 +216,14 @@ class ServiceNow:
     Based on the documentation above (if provided), what type of issue is this? 
     Can it be automated? Provide a brief analysis and troubleshooting steps."""
             
+            # Analyze with LLM
             result = await llm_service.analyze(prompt)
             return result
             
         except Exception as e:
             print(f"Error analyzing ticket: {e}", flush=True)
+            import traceback
+            traceback.print_exc()
             return None
         
     async def take_ticket_ownership(self, session, sys_id, work_notes):
@@ -387,6 +403,7 @@ Provide helpful answer based on the ticket information above."""
                                         
                                         for ticket in new_tickets:
                                             # Uses self.preferred_llm
+                                            print(f"Processing ticket with RAG: {rag_service is not None}", flush=True)
                                             await self.process_ticket(session, ticket, rag_service= rag_service)
                                     else:
                                         if tickets:
