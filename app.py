@@ -9,10 +9,12 @@ from models.voice_agent import VoiceAgent
 from models.alert import Alert
 from models.engineer import Engineer
 from models.twilio_client import TwilioClient
+from models.rag_service import RAGService
 
 from routes.call import call_bp, init_call_routes
 from routes.alert import alert_bp, init_alert_routes
 from routes.onprem import onprem_bp, init_onprem_routes
+from routes.rag import rag_bp, init_rag_routes
 
 
 
@@ -32,6 +34,7 @@ if __name__ == "__main__":
     twilio_client = TwilioClient()
     alert_service = Alert()
     engineer = Engineer()
+    rag_service = RAGService(auto_setup=True)
     
     # 2. Create agents (thin coordinators)
     print("[2/5] Creating agents...")
@@ -43,10 +46,12 @@ if __name__ == "__main__":
     init_call_routes(voice_agent, onprem_bridge)
     init_onprem_routes(onprem_bridge)
     init_alert_routes(alert_service, engineer, twilio_client)
+    init_rag_routes(rag_service)
 
     app.register_blueprint(call_bp)
     app.register_blueprint(onprem_bp)
     app.register_blueprint(alert_bp)
+    app.register_blueprint(rag_bp)
     
     # 5. Start autonomous agent
     print("[4/5] Starting autonomous agent...")

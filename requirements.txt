@@ -7,4 +7,6 @@ twilio
 mcp
 pydantic
 anthropic
+pinecone-client
+tiktoken
 -e ./servicenow-mcp

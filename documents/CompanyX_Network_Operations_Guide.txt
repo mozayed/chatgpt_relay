@@ -1,0 +1,334 @@
+COMPANY X NETWORK OPERATIONS GUIDE
+Version 2.3 - Last Updated: January 2025
+
+================================================================================
+SECTION 1: NETWORK TOPOLOGY OVERVIEW
+================================================================================
+
+Our network consists of three main sites:
+- Headquarters (HQ): 10.0.0.0/16
+- Branch Office Montreal: 10.1.0.0/16  
+- Data Center: 10.2.0.0/16
+
+Core Switches:
+- HQ-CORE-SW01 (Cisco Catalyst 9500)
+- HQ-CORE-SW02 (Cisco Catalyst 9500)
+- HQ-40-0T-SW (Access layer switch, 40th floor)
+
+All switches are managed via SSH on port 22.
+Default credentials stored in LastPass under "Network Infrastructure".
+
+================================================================================
+SECTION 2: VLAN STANDARDS
+================================================================================
+
+VLAN Naming Convention:
+All VLANs MUST follow the format: DEPT-XXX
+
+Standard VLANs:
+- VLAN 10 (MGMT-010): Network Management
+- VLAN 20 (IT-020): IT Department  
+- VLAN 30 (SALES-030): Sales Department
+- VLAN 40 (HR-040): Human Resources
+- VLAN 50 (GUEST-050): Guest WiFi
+- VLAN 100 (DATA-100): Data Center Servers
+
+Creating a new VLAN:
+1. Use command: vlan [number]
+2. Assign name: name DEPT-XXX
+3. Configure SVI if routing required
+4. Document in network inventory spreadsheet
+5. Update firewall rules if needed
+
+================================================================================
+SECTION 3: PORT TROUBLESHOOTING PROCEDURES
+================================================================================
+
+SYMPTOM: Port showing down status
+
+Step 1: Physical Layer Check
+- Verify cable is properly seated on both ends
+- Check for visible cable damage
+- Test with known good cable if available
+- Verify link lights on switch and end device
+
+Step 2: Configuration Check
+Run these commands on the switch:
+- show interface [interface-id] status
+- show interface [interface-id] 
+- show running-config interface [interface-id]
+
+Common issues:
+- Port administratively shutdown: Use "no shutdown" command
+- Speed/duplex mismatch: Set to "auto" on both sides
+- VLAN mismatch: Verify access VLAN matches end device
+
+Step 3: Port Security
+Check if port security is blocking:
+- show port-security interface [interface-id]
+- If violation, clear with: clear port-security sticky [interface]
+
+Step 4: Spanning Tree
+Verify port is not in blocking state:
+- show spanning-tree interface [interface-id]
+- If blocking, check for loops in topology
+
+Step 5: Error Counters
+Check for errors:
+- show interface [interface-id] | include error
+- High CRC errors = bad cable or NIC
+- Input errors = usually physical layer issue
+
+================================================================================
+SECTION 4: WIFI CONNECTIVITY ISSUES
+================================================================================
+
+SYMPTOM: Users cannot connect to WiFi
+
+First Response (5 minutes):
+1. Check wireless controller status: https://wlc.companyx.local
+2. Verify AP is online in controller GUI
+3. Check SSID is broadcasting
+4. Verify DHCP scope has available addresses
+
+Common Causes:
+- AP lost power (check PoE switch port)
+- Controller authentication server down (check RADIUS)
+- DHCP scope exhausted (expand range)
+- AP firmware mismatch (update to controller version)
+
+Access Point Naming:
+Format: FLOOR-LOCATION-APxx
+Example: 04-EAST-AP01 (4th floor, east wing, AP #1)
+
+Reboot Access Point:
+From controller: Wireless > Access Points > Select AP > Reboot
+
+Physical Reboot:
+Locate switch port feeding AP and bounce the port:
+- interface gigabitethernet x/x/x
+- shutdown
+- (wait 10 seconds)
+- no shutdown
+
+================================================================================
+SECTION 5: INTER-VLAN ROUTING ISSUES  
+================================================================================
+
+SYMPTOM: Devices in different VLANs cannot communicate
+
+Troubleshooting Steps:
+
+1. Verify SVI (Switch Virtual Interface) is up:
+   show ip interface brief | include Vlan
+   
+2. Check routing:
+   show ip route
+   Verify routes exist for both VLANs
+
+3. Verify IP helper-address for DHCP:
+   show running-config interface vlan [id]
+   Should see: ip helper-address [DHCP-server-IP]
+
+4. Check firewall rules:
+   Review ACLs between VLANs
+   show ip access-lists
+
+5. Test with ping:
+   ping [destination-IP] source [source-interface]
+
+Remember: Our core switches (HQ-CORE-SW01/02) handle all inter-VLAN routing.
+Access switches should have "ip default-gateway" pointing to core.
+
+================================================================================
+SECTION 6: DHCP TROUBLESHOOTING
+================================================================================
+
+SYMPTOM: Device not receiving IP address
+
+Primary DHCP Server: 10.0.1.10 (Windows Server 2022)
+Secondary DHCP Server: 10.0.1.11 (Failover pair)
+
+Quick Checks:
+1. Verify DHCP scope has available leases
+2. Check server services are running
+3. Verify ip helper-address on VLAN interface
+4. Check for rogue DHCP servers (show dhcp snooping binding)
+
+DHCP Scopes by VLAN:
+- VLAN 20 (IT): 10.0.20.100 - 10.0.20.200
+- VLAN 30 (Sales): 10.0.30.100 - 10.0.30.200  
+- VLAN 40 (HR): 10.0.40.100 - 10.0.40.200
+- VLAN 50 (Guest): 10.0.50.100 - 10.0.50.250
+
+Lease Time: 8 hours (corporate), 1 hour (guest)
+
+Force Release/Renew on Client:
+Windows: ipconfig /release && ipconfig /renew
+Linux: sudo dhclient -r && sudo dhclient
+Mac: System Preferences > Network > Renew DHCP Lease
+
+================================================================================
+SECTION 7: CDP/LLDP NEIGHBOR DISCOVERY
+================================================================================
+
+Use CDP to identify connected devices:
+
+Show all neighbors:
+show cdp neighbors
+
+Show detailed neighbor info:
+show cdp neighbors detail
+
+Show specific interface:
+show cdp neighbors [interface-id] detail
+
+Useful for:
+- Identifying what's plugged into a port
+- Finding IP address of connected device
+- Verifying correct device is connected
+- Network topology mapping
+
+Note: CDP is Cisco proprietary. For non-Cisco devices, use LLDP:
+show lldp neighbors
+show lldp neighbors detail
+
+================================================================================
+SECTION 8: PORT CONFIGURATION STANDARDS
+================================================================================
+
+Standard Access Port Configuration:
+
+interface GigabitEthernet1/0/1
+ description [Department]-[Room]-[Jack#]
+ switchport mode access
+ switchport access vlan [XX]
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+
+Standard Trunk Port Configuration:
+
+interface GigabitEthernet1/0/48
+ description TRUNK-TO-[DEVICE]
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,50
+ no shutdown
+
+Port Security Template (for sensitive areas):
+
+interface GigabitEthernet1/0/10
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+
+================================================================================
+SECTION 9: ESCALATION PROCEDURES
+================================================================================
+
+Severity Levels:
+
+CRITICAL (P1): Network completely down, affecting 50+ users
+- Response time: 15 minutes
+- Escalate to: Network Manager immediately
+- Create P1 incident in ServiceNow
+
+HIGH (P2): Major service degraded, affecting 10-50 users  
+- Response time: 1 hour
+- Escalate if not resolved in 2 hours
+
+MEDIUM (P3): Minor issue, affecting 1-10 users
+- Response time: 4 hours
+- Standard ticket process
+
+LOW (P4): Informational, enhancement requests
+- Response time: Next business day
+
+Emergency Contacts:
+- Network Manager: John Smith (ext. 5001)
+- Network Lead Engineer: Sarah Johnson (ext. 5002)  
+- Vendor Support (Cisco TAC): 1-800-553-2447
+
+================================================================================
+SECTION 10: CHANGE MANAGEMENT
+================================================================================
+
+All network changes require:
+1. Change request in ServiceNow (minimum 48 hours notice)
+2. Peer review of configuration changes
+3. Approved maintenance window
+4. Rollback plan documented
+5. Post-change verification checklist
+
+Approved Maintenance Windows:
+- Tuesday/Thursday: 10 PM - 2 AM (Production)
+- Sunday: 6 AM - 12 PM (Non-production)
+
+Emergency changes (P1 incidents): 
+Can bypass process with Manager approval via phone/email.
+Document retroactively within 24 hours.
+
+Configuration Backup:
+All device configs backed up nightly to: \\netbackup\configs\
+Manual backup before changes: copy running-config startup-config
+
+================================================================================
+SECTION 11: MONITORING AND ALERTS
+================================================================================
+
+Network Monitoring Tools:
+- Primary: PRTG (https://prtg.companyx.local)
+- Secondary: Grafana (https://grafana.companyx.local)
+- Log aggregation: Syslog server at 10.0.1.50
+
+Alert Thresholds:
+- Interface utilization > 80%: Warning
+- Interface utilization > 95%: Critical
+- Device unreachable for 5 minutes: Critical  
+- Interface down/down: Warning
+- Interface errors > 1000/hour: Warning
+
+All critical alerts automatically create ServiceNow incidents.
+
+Grafana Dashboards:
+- Network Overview: Real-time status of all devices
+- Bandwidth Usage: Interface utilization trends
+- Error Rates: CRC, input/output errors by device
+
+================================================================================
+SECTION 12: COMMON COMMANDS REFERENCE
+================================================================================
+
+Basic Show Commands:
+show version - IOS version and uptime
+show running-config - Current configuration  
+show startup-config - Saved configuration
+show ip interface brief - Quick interface status
+show vlan brief - VLAN summary
+show mac address-table - MAC address table
+show arp - ARP table
+show log - System logs
+
+Troubleshooting Commands:
+show interfaces status - All interface status
+show interface [id] - Detailed interface info
+show spanning-tree - STP status
+show cdp neighbors - Connected devices
+show ip route - Routing table
+show processes cpu - CPU utilization
+show memory - Memory utilization
+
+Configuration Commands (must be in enable mode):
+configure terminal - Enter config mode
+interface [id] - Enter interface config
+write memory - Save configuration (or: copy run start)
+reload - Reboot device (confirm prompt appears)
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+
+For questions or updates to this guide:
+Contact: IT Network Team (networkteam@companyx.com)
+Document maintained in: SharePoint > IT > Network Documentation
