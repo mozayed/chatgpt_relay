@@ -58,7 +58,7 @@ if __name__ == "__main__":
     agent_thread = threading.Thread(
         target=lambda: asyncio.run(
             network_agent.start_servicenow(
-                llm_type=network_agent.preferred_llm  # Pass agent's LLM preference
+                llm=network_agent.preferred_llm  # Pass agent's LLM preference
             )
         ),
         daemon=True
