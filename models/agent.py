@@ -3,10 +3,11 @@ from openai import OpenAI
 
 class NetworkAgent:
     
-    def __init__(self, servicenow_instance):
+    def __init__(self, servicenow_instance, rag_service):
         # self.claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
         # self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.servicenow_instance = servicenow_instance
+        self.rag_service = rag_service
         self.preferred_llm = "Claude"
     
     def set_preferred_llm(self, llm):
@@ -17,7 +18,7 @@ class NetworkAgent:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         self.set_preferred_llm(llm)
-        loop.run_until_complete(self.servicenow_instance.start_servicenow_job(self.preferred_llm))
+        loop.run_until_complete(self.servicenow_instance.start_servicenow_job(self.preferred_llm, rag_service= self.rag_service))
 
     def access_tool(self):
         pass

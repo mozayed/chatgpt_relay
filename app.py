@@ -38,8 +38,8 @@ if __name__ == "__main__":
     
     # 2. Create agents (thin coordinators)
     print("[2/5] Creating agents...")
-    network_agent = NetworkAgent(servicenow)
-    voice_agent = VoiceAgent(servicenow, onprem_bridge)
+    network_agent = NetworkAgent(servicenow, rag_service)
+    voice_agent = VoiceAgent(servicenow, onprem_bridge, rag_service)
     
     # 4. Initialize routes
     print("[3/5] Initializing routes...")

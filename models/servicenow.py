@@ -168,24 +168,44 @@ class ServiceNow:
             print(f"Error fetching tickets: {e}", flush=True)
             return None
     
-    async def analyze_ticket(self, ticket, llm=None):
-        """Analyze ticket - can override LLM per call"""
+    async def analyze_ticket(self, ticket, llm=None, rag_service= None):
+        """Analyze ticket - can override LLM per call - with optianal RAG context"""
         try:
-            # Choose LLM type (override or default)
             llm_type = llm if llm is not None else self.preferred_llm
-            
-            # Create LLM service via factory
             llm_service = AbstractLLMServiceFactory.get_llm_instance(llm_type)
             
-            # Use it
-            result = await llm_service.analyze(f"""Analyze this ServiceNow ticket:
-                Number: {ticket.get('number', 'N/A')}
-                Short Description: {ticket.get('short_description', 'N/A')}
-                Description: {ticket.get('description', 'N/A')}
-                
-                What type of issue is this? Can it be automated? Provide a brief analysis.""")
+            # Build ticket description
+            ticket_text = f"""
+            Number: {ticket.get('number', 'N/A')}
+            Short Description: {ticket.get('short_description', 'N/A')}
+            Description: {ticket.get('description', 'N/A')}
+            """
             
+            # Search RAG for relevant documentation
+            context = ""
+            if rag_service:
+                try:
+                    docs = rag_service.search(ticket_text, top_k=2)
+                    if docs:
+                        context = "\n\n=== RELEVANT DOCUMENTATION ===\n"
+                        for i, doc in enumerate(docs):
+                            context += f"\n[Document {i+1} from {doc['source']}]:\n{doc['text']}\n"
+                        context += "\n=== END DOCUMENTATION ===\n"
+                except Exception as e:
+                    print(f"RAG search failed: {e}", flush=True)
+            
+            # Analyze with context
+            prompt = f"""{context}
+
+    Analyze this ServiceNow ticket:
+    {ticket_text}
+
+    Based on the documentation above (if provided), what type of issue is this? 
+    Can it be automated? Provide a brief analysis and troubleshooting steps."""
+            
+            result = await llm_service.analyze(prompt)
             return result
+            
         except Exception as e:
             print(f"Error analyzing ticket: {e}", flush=True)
             return None
@@ -207,12 +227,12 @@ class ServiceNow:
             print(f"Error updating ticket: {e}", flush=True)
             return None
         
-    async def process_ticket(self, session, ticket, llm=None):
+    async def process_ticket(self, session, ticket, llm=None, rag_service= None):
         """Process a single ticket - analyze and take ownership"""
         print(f"Processing: {ticket.get('number')} - {ticket.get('short_description')}", flush=True)
         
-        # Analyze the ticket (pass llm if overriding)
-        analysis = await self.analyze_ticket(ticket, llm=llm)
+        # Analyze the ticket (pass llm if overriding, pass rag service)
+        analysis = await self.analyze_ticket(ticket, llm=llm, rag_service= rag_service)
         
         if analysis:
             sys_id = ticket.get('sys_id')
@@ -323,7 +343,7 @@ Provide helpful answer based on the ticket information above."""
             print(f"Error asking LLM: {e}", flush=True)
             return f"Sorry, I encountered an error: {str(e)}"
         
-    async def start_servicenow_job(self, llm_type):
+    async def start_servicenow_job(self, llm_type, rag_service= None):
         """Main autonomous loop - monitors and processes tickets"""
         
         # Set preferred LLM type
@@ -367,7 +387,7 @@ Provide helpful answer based on the ticket information above."""
                                         
                                         for ticket in new_tickets:
                                             # Uses self.preferred_llm
-                                            await self.process_ticket(session, ticket)
+                                            await self.process_ticket(session, ticket, rag_service= rag_service)
                                     else:
                                         if tickets:
                                             print(f"All {len(tickets)} tickets already processed", flush=True)
