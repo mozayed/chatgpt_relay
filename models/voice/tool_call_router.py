@@ -1,10 +1,11 @@
 class ToolCallRouter:
     """Routes tool calls to appropriate service"""
     
-    def __init__(self, servicenow, onprem_bridge, llm_choice):
+    def __init__(self, servicenow, onprem_bridge, llm_choice, documentation_service):
         self.servicenow = servicenow
         self.onprem_bridge = onprem_bridge
         self.llm_choice = llm_choice
+        self.documentation_service = documentation_service
     
     async def route(self, function_name, arguments):
         """Route tool call to correct service"""
@@ -31,6 +32,10 @@ class ToolCallRouter:
             resolution_notes = arguments.get('resolution_notes')
             close_code = arguments.get('close_code', 'Solved')
             return await self.servicenow.close_ticket(ticket_number, resolution_notes, close_code)
+        
+        elif function_name == "search_documentation":
+            query = arguments.get('query')
+            return self.documentation_service(query)
 
         # On-prem network device tools
         elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_ntp', 'get_device_spanning_tree']:

@@ -2,13 +2,14 @@ import os
 import requests
 from config.servicenow_tools import SERVICENOW_TOOLS
 from config.onprem_tools import ONPREM_TOOLS
+from config.documentation_tools import DOCUMENTATION_TOOLS
 
 class CallAcceptor:
     """Accepts incoming calls and configures ChatGPT with tools"""
     
     def accept(self, call_id):
         """Accept call with OpenAI Realtime API"""
-        all_tools = SERVICENOW_TOOLS + ONPREM_TOOLS
+        all_tools = SERVICENOW_TOOLS + ONPREM_TOOLS + DOCUMENTATION_TOOLS
 
         try:
             response = requests.post(
@@ -29,7 +30,8 @@ class CallAcceptor:
 
                     You can:
                     - Query, create, update, and close ServiceNow tickets
-                    - Check network device information (VLANs, CDP, ntp, spanning tree)""",
+                    - Check network device information (VLANs, CDP, ntp, spanning tree)
+                    - Search company documentation for procedures and guides """,
                     "tools": all_tools
                 }
             )
