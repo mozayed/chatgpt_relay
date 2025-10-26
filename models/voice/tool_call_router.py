@@ -35,7 +35,7 @@ class ToolCallRouter:
         
         elif function_name == "search_documentation":
             query = arguments.get('query')
-            return self.documentation_service(query)
+            return self.documentation_service.search_documentation(query)
 
         # On-prem network device tools
         elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_ntp', 'get_device_spanning_tree']:
