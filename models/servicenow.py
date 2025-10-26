@@ -191,10 +191,20 @@ class ServiceNow:
                         
                         if data.get('success'):
                             tickets = data.get('incidents', [])
+                            
+                            # Return summary format
                             return {
                                 "success": True,
                                 "count": len(tickets),
-                                "tickets": tickets
+                                "summary": f"There are {len(tickets)} open tickets in the network queue",
+                                "tickets": [
+                                    {
+                                        "number": t.get("number"),
+                                        "short_description": t.get("short_description"),
+                                        "priority": t.get("priority"),
+                                        "state": t.get("state")
+                                    } for t in tickets
+                                ]
                             }
                     
                     return {"success": False, "message": "Failed to list tickets"}
