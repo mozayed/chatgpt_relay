@@ -65,6 +65,16 @@ SERVICENOW_TOOLS = [
         }
     },
     {
+    "type": "function",
+    "name": "list_open_tickets",
+    "description": "List all open ServiceNow tickets in the network queue. Returns ticket numbers, descriptions, priorities, and current states.",
+    "parameters": {
+        "type": "object",
+        "properties": {},
+        "required": []
+    }
+    },
+    {
         "type": "function",
         "name": "close_servicenow_ticket",
         "description": "Close a ServiceNow ticket with resolution notes",
