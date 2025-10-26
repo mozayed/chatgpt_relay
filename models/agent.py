@@ -28,10 +28,5 @@ class NetworkAgent:
         print(f"NetworkAgent starting with RAG: {self.rag_service is not None}", flush=True)
         loop.run_until_complete(self.servicenow_instance.start_servicenow_job(self.preferred_llm, rag_service= self.rag_service))
 
-    def access_tool(self):
-        pass
-    def do_job(self):
-        pass
-    def chat(self):
-        pass
+
     
