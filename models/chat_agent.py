@@ -80,6 +80,7 @@ Be helpful, technical, and concise. Use tools when needed to get real-time infor
         if response.stop_reason == "tool_use":
             # Extract tool calls
             tool_results = []
+            assistant_content = []
             
             for content_block in response.content:
                 if content_block.type == "tool_use":
@@ -89,6 +90,14 @@ Be helpful, technical, and concise. Use tools when needed to get real-time infor
                     
                     print(f"🔧 Claude calling: {tool_name}({tool_input})", flush=True)
                     
+                    # Store tool use in assistant content (serializable format)
+                    assistant_content.append({
+                        "type": "tool_use",
+                        "id": tool_use_id,
+                        "name": tool_name,
+                        "input": tool_input
+                    })
+                    
                     # Execute tool
                     result = await self.router.route(tool_name, tool_input)
                     
@@ -97,11 +106,17 @@ Be helpful, technical, and concise. Use tools when needed to get real-time infor
                         "tool_use_id": tool_use_id,
                         "content": json.dumps(result)
                     })
+                elif content_block.type == "text":
+                    # Include any text blocks too
+                    assistant_content.append({
+                        "type": "text",
+                        "text": content_block.text
+                    })
             
-            # Add assistant message with tool use
+            # Add assistant message with tool use (serializable format)
             messages.append({
                 "role": "assistant",
-                "content": response.content
+                "content": assistant_content
             })
             
             # Add tool results
@@ -119,11 +134,22 @@ Be helpful, technical, and concise. Use tools when needed to get real-time infor
                 tools=self.tools
             )
             
-            # Extract text response
+            # Extract text response and convert to serializable format
             text_response = ""
+            final_content = []
             for block in final_response.content:
                 if hasattr(block, 'text'):
                     text_response += block.text
+                    final_content.append({
+                        "type": "text",
+                        "text": block.text
+                    })
+            
+            # Add final assistant message
+            messages.append({
+                "role": "assistant",
+                "content": final_content
+            })
             
             return {
                 "message": text_response,
@@ -133,13 +159,19 @@ Be helpful, technical, and concise. Use tools when needed to get real-time infor
         else:
             # No tool use, direct response
             text_response = ""
+            serializable_content = []
+            
             for block in response.content:
                 if hasattr(block, 'text'):
                     text_response += block.text
+                    serializable_content.append({
+                        "type": "text",
+                        "text": block.text
+                    })
             
             messages.append({
                 "role": "assistant",
-                "content": response.content
+                "content": serializable_content
             })
             
             return {
