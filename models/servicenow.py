@@ -168,6 +168,41 @@ class ServiceNow:
             print(f"Error fetching tickets: {e}", flush=True)
             return None
     
+    async def list_open_tickets(self):
+        """List all open tickets in the network queue"""
+        try:
+            server_params = StdioServerParameters(
+                command="python",
+                args=["-m", "servicenow_mcp.cli"],
+                env=dict(os.environ)
+            )
+            
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    
+                    result = await session.call_tool(
+                        "list_incidents",
+                        {"assignment_group": self.assignment_group}
+                    )
+                    
+                    if result and result.content:
+                        data = json.loads(result.content[0].text)
+                        
+                        if data.get('success'):
+                            tickets = data.get('incidents', [])
+                            return {
+                                "success": True,
+                                "count": len(tickets),
+                                "tickets": tickets
+                            }
+                    
+                    return {"success": False, "message": "Failed to list tickets"}
+        
+        except Exception as e:
+            print(f"Error listing tickets: {e}", flush=True)
+            return {"success": False, "error": str(e)}
+        
     async def analyze_ticket(self, ticket, llm=None, rag_service=None):
         """Analyze ticket - with optional RAG context"""
         try:
