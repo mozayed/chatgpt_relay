@@ -1,5 +1,5 @@
 """Chat API routes"""
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, render_template
 import asyncio
 
 chat_bp = Blueprint('chat', __name__)
@@ -12,6 +12,11 @@ def init_chat_routes(chat_agent):
     global _chat_agent
     _chat_agent = chat_agent
     print("✓ Chat routes initialized")
+
+@chat_bp.route("/chat", methods=['GET'])
+def chat_page():
+    """Serve chat interface"""
+    return render_template('chat.html')
 
 @chat_bp.route("/api/chat", methods=['POST'])
 def chat():
