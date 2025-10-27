@@ -125,6 +125,12 @@ body {
     background: #f9fafb;
     border-top: 1px solid #e5e7eb;
 }
+.bunny-gif {
+    width: 40px;
+    height: 40px;
+    vertical-align: middle;
+    margin-right: 8px;
+}
 
 #messageInput {
     flex: 1;
