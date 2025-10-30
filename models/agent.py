@@ -1,11 +1,9 @@
-import asyncio, anthropic, os
-from openai import OpenAI
+import asyncio
 
 class NetworkAgent:
     
     def __init__(self, servicenow_instance, rag_service):
-        # self.claude_client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        # self.openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
         print(f"🔧 NetworkAgent.__init__ called", flush=True)
         print(f"  servicenow_instance: {servicenow_instance is not None}", flush=True)
         print(f"  rag_service: {rag_service is not None}", flush=True)
