@@ -14,7 +14,7 @@ class VoiceAgent:
         self.preferred_llm = "OPENAI"
         
         # Create voice system components
-        self._tool_router = ToolRouter(servicenow, onprem_bridge, self.preferred_llm, self.documentation_service)
+        self._tool_router = ToolRouter(servicenow, onprem_bridge, self.rag_service, self.preferred_llm)
         self._call_monitor = CallMonitor(self._tool_router)
         self._call_acceptor = CallAcceptor()
         self._webhook_handler = WebhookHandler(self._call_acceptor, self._call_monitor)
