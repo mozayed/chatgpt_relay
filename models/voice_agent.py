@@ -14,7 +14,7 @@ class VoiceAgent:
         self.preferred_llm = "OPENAI"
         
         # Create voice system components
-        self._tool_router = ToolRouter(servicenow, onprem_bridge, self.rag_service, self.preferred_llm)
+        self._tool_router = ToolRouter(servicenow, onprem_bridge, self.rag_service)
         self._call_monitor = CallMonitor(self._tool_router)
         self._call_acceptor = CallAcceptor()
         self._webhook_handler = WebhookHandler(self._call_acceptor, self._call_monitor)
@@ -26,5 +26,4 @@ class VoiceAgent:
     def change_llm(self, llm_name):
         """Change LLM preference"""
         self.preferred_llm = llm_name
-        self._tool_router.llm_choice = llm_name
         print(f"VoiceAgent LLM changed to: {llm_name}", flush=True)
