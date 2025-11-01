@@ -37,8 +37,9 @@ class ServiceNowHandler(AbstractToolHandler, tool_pattern= 'servicenow'):
             return await self.servicenow.close_ticket(ticket_number, resolution_notes, close_code)
         
         elif function_name == 'list_open_tickets':
-            return await self.servicenow.list_open_tickets()
-        
+            result= await self.servicenow.list_open_tickets()
+            print(f"📊 ServiceNow returned: {result}", flush=True)
+            return result
 
 
 class OnPremToolHandler(AbstractToolHandler, tool_pattern= 'device'):
