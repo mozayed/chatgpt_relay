@@ -13,7 +13,7 @@ class ServiceNowHandler(AbstractToolHandler, tool_pattern= 'servicenow'):
         self.servicenow = servicenow
     
     async def handle(self, function_name, arguments):
-        
+        print(f"🎯 Handler received: '{function_name}'", flush=True)
         if function_name == 'query_servicenow_ticket':
             ticket_number = arguments.get('ticket_number')
             return await self.servicenow.get_ticket_data(ticket_number)
@@ -37,9 +37,13 @@ class ServiceNowHandler(AbstractToolHandler, tool_pattern= 'servicenow'):
             return await self.servicenow.close_ticket(ticket_number, resolution_notes, close_code)
         
         elif function_name == 'list_open_tickets':
+            print(f"✅ Matched list_open_tickets condition", flush=True)
             result= await self.servicenow.list_open_tickets()
             print(f"📊 ServiceNow returned: {result}", flush=True)
             return result
+        else:
+            print(f"❌ No condition matched for: '{function_name}'", flush=True)
+            return None
 
 
 class OnPremToolHandler(AbstractToolHandler, tool_pattern= 'device'):
