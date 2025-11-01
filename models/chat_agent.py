@@ -104,6 +104,7 @@ class ChatAgent:
                     
                     # Execute tool
                     result = await self.router.route(tool_name, tool_input)
+                    print(f"🔍 Tool result: {result}", flush=True)
                     
                     tool_results.append({
                         "type": "tool_result",
