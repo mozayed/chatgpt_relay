@@ -17,7 +17,9 @@ class ToolRouter:
         
         
         if 'servicenow' in function_name:
-            return await self.servicenow_handler.handle(function_name, arguments)
+            result= await self.servicenow_handler.handle(function_name, arguments)
+            print(f"✅ Router returning: {result}", flush=True)
+            return result
         
         elif 'search' in function_name:
             return await self.documentation_handler.handle(function_name, arguments)
