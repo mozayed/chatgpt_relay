@@ -1,4 +1,4 @@
-from models.tool_handler import AbstractToolHandler, ServiceNowHandler, OnPremToolHandler, DocumentationHandler
+from models.tool_handler import ServiceNowHandler, OnPremToolHandler, DocumentationHandler
 from config.servicenow_tools import SERVICENOW_TOOLS
 from config.onprem_tools import ONPREM_TOOLS
 from config.documentation_tools import DOCUMENTATION_TOOLS
@@ -9,9 +9,11 @@ class ToolRouter:
         self.servicenow = servicenow
         self.onprem_bridge = onprem_bridge
         self.rag_service = rag_service
+
         self.servicenow_handler = ServiceNowHandler(self.servicenow)
         self.documentation_handler = DocumentationHandler(self.rag_service)
         self.onprembridge_handler = OnPremToolHandler(self.onprem_bridge)
+
         # BUILD TOOL -> HANDLER MAPPING FROM CONFIGS!
         self.tool_map = {}
         # Map ServiceNow tools
@@ -34,28 +36,9 @@ class ToolRouter:
         handler = self.tool_map.get(function_name)
         
         if handler:
-            result = await handler.handle(function_name, arguments)
-            print(f"✅ Returning: {result}", flush=True)
-            return result
+            return await handler.handle(function_name, arguments)
         
         return {"error": f"No handler found for: {function_name}"}
         
-    
-
-    # async def route(self, function_name, arguments):
-    #     """Route tool call to correct handler"""
-    #     print(f"🔧 Chat routing: {function_name}", flush=True)
-        
-        
-    #     if 'servicenow' in function_name:
-    #         result= await self.servicenow_handler.handle(function_name, arguments)
-    #         print(f"✅ Router returning: {result}", flush=True)
-    #         return result
-        
-    #     elif 'search' in function_name:
-    #         return await self.documentation_handler.handle(function_name, arguments)
-        
-    #     elif function_name in ['get_device_vlans', 'get_device_cdp', 'get_device_ntp', 'get_device_spanning_tree']:
-    #         return await self.onprembridge_handler.handle(function_name, arguments)
         
         

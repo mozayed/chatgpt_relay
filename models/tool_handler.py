@@ -38,9 +38,8 @@ class ServiceNowHandler(AbstractToolHandler, tool_pattern= 'servicenow'):
         
         elif function_name == 'list_open_tickets':
             print(f"✅ Matched list_open_tickets condition", flush=True)
-            result= await self.servicenow.list_open_tickets()
-            print(f"📊 ServiceNow returned: {result}", flush=True)
-            return result
+            return await self.servicenow.list_open_tickets()
+            
         else:
             print(f"❌ No condition matched for: '{function_name}'", flush=True)
             return None
