@@ -2,7 +2,7 @@
 import anthropic
 import os
 import json
-from models.chat_tool_router import ChatToolRouter
+from online.models.tool_router import ToolRouter
 
 class ChatAgent:
     """Chat interface using Claude for network operations"""
@@ -13,7 +13,7 @@ class ChatAgent:
         self.rag_service = rag_service
         
         # Create router
-        self.router = ChatToolRouter(servicenow, onprem_bridge, rag_service)
+        self.router = ToolRouter(servicenow, onprem_bridge, rag_service)
         
         # Claude client
         self.client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))

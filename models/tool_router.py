@@ -1,6 +1,6 @@
 from models.tool_handler import ServiceNowHandler, OnPremToolHandler, DocumentationHandler
 
-class ChatToolRouter:
+class ToolRouter:
     """Routes tool calls from ChatAgent to appropriate service handlers"""
     
     def __init__(self, servicenow, onprem_bridge, rag_service):

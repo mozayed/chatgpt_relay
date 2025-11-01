@@ -1,8 +1,7 @@
 from models.voice.webhook_handler import WebhookHandler
 from models.voice.call_acceptor import CallAcceptor
 from models.voice.call_monitor import CallMonitor
-from models.voice.tool_call_router import ToolCallRouter
-from models.documentation_service import DocumentationService
+from models.tool_router import ToolRouter
 
 class VoiceAgent:
     """Voice Agent - coordinates voice call system"""
@@ -13,10 +12,9 @@ class VoiceAgent:
         self.rag_service = rag_service
         self.onprem_bridge = onprem_bridge
         self.preferred_llm = "OPENAI"
-        self.documentation_service = DocumentationService(rag_service)
         
         # Create voice system components
-        self._tool_router = ToolCallRouter(servicenow, onprem_bridge, self.preferred_llm, self.documentation_service)
+        self._tool_router = ToolRouter(servicenow, onprem_bridge, self.preferred_llm, self.documentation_service)
         self._call_monitor = CallMonitor(self._tool_router)
         self._call_acceptor = CallAcceptor()
         self._webhook_handler = WebhookHandler(self._call_acceptor, self._call_monitor)
