@@ -2,7 +2,7 @@
 import anthropic
 import os
 import json
-from online.models.tool_router import ToolRouter
+from .tool_router import ToolRouter
 
 class ChatAgent:
     """Chat interface using Claude for network operations"""
