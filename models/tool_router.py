@@ -1,5 +1,7 @@
 from models.tool_handler import AbstractToolHandler, ServiceNowHandler, OnPremToolHandler, DocumentationHandler
-
+from config.servicenow_tools import SERVICENOW_TOOLS
+from config.onprem_tools import ONPREM_TOOLS
+from config.documentation_tools import DOCUMENTATION_TOOLS
 class ToolRouter:
     """Routes tool calls from ChatAgent to appropriate service handlers"""
     
@@ -7,33 +9,37 @@ class ToolRouter:
         self.servicenow = servicenow
         self.onprem_bridge = onprem_bridge
         self.rag_service = rag_service
-        registry = AbstractToolHandler._handlers_registry
-        self.handlers = {}
-        # Map services to handlers
-        service_map = {
-            'servicenow': servicenow,
-            'device': onprem_bridge,
-            'search': rag_service
-        }
-        # Create handler instances from registry
-        for pattern, handler_class in registry.items():
-            service = service_map.get(pattern)
-            if service:
-                self.handlers[pattern] = handler_class(service)
+        self.servicenow_handler = ServiceNowHandler(self.servicenow)
+        self.documentation_handler = DocumentationHandler(self.rag_service)
+        self.onprembridge_handler = OnPremToolHandler(self.onprem_bridge)
+        # BUILD TOOL -> HANDLER MAPPING FROM CONFIGS!
+        self.tool_map = {}
+        # Map ServiceNow tools
+        for tool in SERVICENOW_TOOLS:
+            self.tool_map[tool['name']] = self.servicenow_handler
         
+        # Map OnPrem tools
+        for tool in ONPREM_TOOLS:
+            self.tool_map[tool['name']] = self.onprembridge_handler
+        
+        # Map Documentation tools
+        for tool in DOCUMENTATION_TOOLS:
+            self.tool_map[tool['name']] = self.documentation_handler
+       
+
     async def route(self, function_name, arguments):
         print(f"🔧 Routing: {function_name}", flush=True)
         
-        # FIND HANDLER BY PATTERN!
-        for pattern, handler in self.handlers.items():
-            if pattern in function_name or function_name.startswith(pattern):
-                return await handler.handle(function_name, arguments)
+        # LOOKUP HANDLER FROM MAP!
+        handler = self.tool_map.get(function_name)
         
-        # No handler found
+        if handler:
+            result = await handler.handle(function_name, arguments)
+            print(f"✅ Returning: {result}", flush=True)
+            return result
+        
         return {"error": f"No handler found for: {function_name}"}
-        # self.servicenow_handler = ServiceNowHandler(self.servicenow)
-        # self.documentation_handler = DocumentationHandler(self.rag_service)
-        # self.onprembridge_handler = OnPremToolHandler(self.onprem_bridge)
+        
     
 
     # async def route(self, function_name, arguments):
