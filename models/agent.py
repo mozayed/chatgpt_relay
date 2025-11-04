@@ -11,6 +11,7 @@ class NetworkAgent:
         self.rag_service = rag_service
         self.preferred_llm = "Claude"
         print(f"  ✓ Stored rag_service: {self.rag_service is not None}", flush=True)
+        
     def set_preferred_llm(self, llm):
         self.preferred_llm = llm
 
